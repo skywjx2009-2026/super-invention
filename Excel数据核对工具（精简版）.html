@@ -1,0 +1,1402 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Excel 数据核对工具（任意两表比对版）</title>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: #f0f2f5; color: #333; min-height: 100vh;
+  }
+  .header {
+    background: linear-gradient(135deg, #1e3a5f 0%, #2c5282 100%);
+    color: #fff; padding: 20px 32px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  }
+  .header h1 { font-size: 20px; font-weight: 600; letter-spacing: 0.5px; }
+  .header p { font-size: 13px; opacity: 0.8; margin-top: 4px; }
+  .container { max-width: 1360px; margin: 0 auto; padding: 24px 32px; }
+
+  .section-title {
+    font-size: 15px; font-weight: 600; color: #1e3a5f;
+    margin-bottom: 14px; padding-left: 10px; border-left: 3px solid #2c5282;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .section-title .step-badge {
+    background: #2c5282; color: #fff; font-size: 11px; padding: 2px 8px;
+    border-radius: 10px; font-weight: 500;
+  }
+
+  /* 上传卡片 */
+  .upload-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 24px;
+  }
+  .sheet-card {
+    background: #fff; border-radius: 8px; border: 1px solid #e2e8f0;
+    overflow: hidden; transition: box-shadow 0.2s;
+  }
+  .sheet-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+  .sheet-card.loaded { border-color: #48bb78; }
+  .card-head {
+    padding: 12px 16px; display: flex; align-items: center; gap: 10px;
+    border-bottom: 1px solid #edf2f7;
+  }
+  .card-head .icon { font-size: 22px; }
+  .card-head .info { flex: 1; min-width: 0; }
+  .card-head .name { font-size: 14px; font-weight: 600; color: #2d3748; }
+  .card-head .sub { font-size: 11px; color: #a0aec0; margin-top: 2px; }
+  .card-head .status-dot {
+    width: 8px; height: 8px; border-radius: 50%; background: #cbd5e0; flex-shrink: 0;
+  }
+  .sheet-card.loaded .status-dot { background: #48bb78; }
+  .card-head .remove-btn {
+    background: none; border: none; color: #cbd5e0; cursor: pointer; font-size: 18px;
+    padding: 2px 6px; border-radius: 4px; display: none; line-height: 1;
+  }
+  .sheet-card.loaded .remove-btn { display: block; }
+  .card-head .remove-btn:hover { color: #e53e3e; background: #fff5f5; }
+  .card-body { padding: 12px 16px; }
+  .upload-placeholder {
+    text-align: center; padding: 12px 8px; color: #a0aec0; font-size: 12px;
+  }
+  .upload-placeholder .big-icon { font-size: 28px; margin-bottom: 6px; opacity: 0.5; }
+  .upload-btn {
+    display: inline-block; padding: 6px 16px; background: #edf2f7; color: #4a5568;
+    border-radius: 5px; font-size: 12px; cursor: pointer; margin-top: 6px;
+    border: 1px solid #e2e8f0; transition: all 0.15s;
+  }
+  .upload-btn:hover { background: #2c5282; color: #fff; border-color: #2c5282; }
+  .sheet-card input[type="file"] { display: none; }
+
+  .sheet-info { display: none; }
+  .sheet-card.loaded .sheet-info { display: block; }
+  .sheet-card.loaded .upload-placeholder { display: none; }
+  .file-meta {
+    font-size: 11px; color: #718096; margin-bottom: 8px;
+    display: flex; justify-content: space-between;
+  }
+  .file-meta .fn {
+    max-width: 65%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .fields-label {
+    font-size: 11px; font-weight: 600; color: #718096; margin-bottom: 5px;
+  }
+  .fields-tags {
+    display: flex; flex-wrap: wrap; gap: 4px; max-height: 100px; overflow-y: auto;
+  }
+  .field-tag {
+    font-size: 10px; padding: 2px 7px; background: #edf2f7; color: #4a5568;
+    border-radius: 8px; white-space: nowrap;
+  }
+
+  /* 操作区：表选择 */
+  .action-bar {
+    background: #fff; border-radius: 8px; padding: 16px 24px;
+    display: flex; align-items: center; gap: 12px; margin-bottom: 16px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05); flex-wrap: wrap;
+  }
+  .table-select-group {
+    display: flex; align-items: center; gap: 8px;
+  }
+  .table-select-label {
+    font-size: 13px; color: #4a5568; font-weight: 500;
+  }
+  .table-select {
+    padding: 7px 10px; border: 1px solid #e2e8f0; border-radius: 5px;
+    font-size: 13px; color: #2d3748; background: #fff; cursor: pointer; min-width: 100px;
+  }
+  .table-select:focus { outline: none; border-color: #2c5282; box-shadow: 0 0 0 2px rgba(44,82,130,0.1); }
+  .swap-icon {
+    font-size: 16px; color: #a0aec0; cursor: pointer; padding: 4px;
+    border-radius: 4px; transition: all 0.15s;
+  }
+  .swap-icon:hover { color: #2c5282; background: #edf2f7; }
+  .btn {
+    padding: 9px 20px; border: none; border-radius: 6px; font-size: 13px;
+    font-weight: 500; cursor: pointer; transition: all 0.2s; display: inline-flex;
+    align-items: center; gap: 6px;
+  }
+  .btn-primary { background: #2c5282; color: #fff; }
+  .btn-primary:hover:not(:disabled) { background: #1e3a5f; }
+  .btn-primary:disabled { background: #cbd5e0; cursor: not-allowed; color: #fff; }
+  .btn-success { background: #38a169; color: #fff; }
+  .btn-success:hover:not(:disabled) { background: #2f855a; }
+  .btn-success:disabled { background: #cbd5e0; cursor: not-allowed; }
+  .btn-ghost { background: #edf2f7; color: #4a5568; }
+  .btn-ghost:hover { background: #e2e8f0; }
+  .btn-sm { padding: 6px 14px; font-size: 12px; }
+  .btn-danger-sm {
+    background: none; border: 1px solid #fed7d7; color: #e53e3e; padding: 3px 8px;
+    border-radius: 4px; cursor: pointer; font-size: 12px; transition: all 0.15s;
+  }
+  .btn-danger-sm:hover { background: #fff5f5; border-color: #e53e3e; }
+  .action-bar .divider { width: 1px; height: 28px; background: #e2e8f0; }
+  .action-hint { font-size: 12px; color: #a0aec0; margin-left: auto; }
+
+  /* 快捷组合按钮 */
+  .quick-pairs {
+    display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px;
+  }
+  .quick-pair-btn {
+    padding: 5px 12px; border: 1px solid #e2e8f0; background: #fff; border-radius: 14px;
+    font-size: 12px; color: #4a5568; cursor: pointer; transition: all 0.15s;
+  }
+  .quick-pair-btn:hover { border-color: #2c5282; color: #2c5282; background: #f7fafc; }
+  .quick-pair-btn.active { background: #2c5282; color: #fff; border-color: #2c5282; }
+
+  /* 字段配对配置面板 */
+  .pairing-panel {
+    background: #fff; border-radius: 8px; padding: 20px 24px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05); margin-bottom: 24px;
+    display: none; border-top: 3px solid #2c5282;
+  }
+  .pairing-panel.show { display: block; }
+  .pairing-header {
+    display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;
+  }
+  .pairing-header h3 { font-size: 15px; font-weight: 600; color: #1e3a5f; }
+  .pairing-header .desc { font-size: 12px; color: #718096; margin-top: 3px; }
+  .pairing-close {
+    background: none; border: none; color: #a0aec0; cursor: pointer; font-size: 18px;
+    padding: 4px 8px; border-radius: 4px;
+  }
+  .pairing-close:hover { color: #4a5568; background: #edf2f7; }
+
+  .pairing-section { margin-bottom: 18px; }
+  .pairing-section-title {
+    font-size: 12px; font-weight: 600; color: #4a5568; margin-bottom: 8px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .pairing-section-title .num-badge {
+    background: #2c5282; color: #fff; font-size: 10px; width: 16px; height: 16px;
+    border-radius: 50%; display: inline-flex; align-items: center; justify-content: center;
+  }
+  .pairing-section-title .tip {
+    font-weight: 400; color: #a0aec0; font-size: 11px;
+  }
+
+  .pairing-table {
+    width: 100%; border-collapse: separate; border-spacing: 0;
+    border: 1px solid #e2e8f0; border-radius: 6px; overflow: hidden;
+  }
+  .pairing-table th {
+    background: #f7fafc; font-size: 11px; font-weight: 600; color: #4a5568;
+    padding: 8px 12px; text-align: left; border-bottom: 1px solid #e2e8f0;
+  }
+  .pairing-table td {
+    padding: 8px 12px; border-bottom: 1px solid #edf2f7; vertical-align: middle;
+  }
+  .pairing-table tr:last-child td { border-bottom: none; }
+  .pairing-table .col-left { width: 38%; }
+  .pairing-table .col-arrow { width: 40px; text-align: center; color: #a0aec0; font-size: 14px; }
+  .pairing-table .col-right { width: 38%; }
+  .pairing-table .col-del { width: 50px; text-align: center; }
+  .pairing-select {
+    width: 100%; padding: 6px 8px; border: 1px solid #e2e8f0; border-radius: 4px;
+    font-size: 12px; color: #2d3748; background: #fff; cursor: pointer;
+  }
+  .pairing-select:focus { outline: none; border-color: #2c5282; box-shadow: 0 0 0 2px rgba(44,82,130,0.1); }
+  .pairing-select.unmapped { border-color: #ed8936; background: #fffaf0; }
+  .pairing-select.duplicate { border-color: #e53e3e; background: #fff5f5; }
+
+  .add-row-btn {
+    margin-top: 8px; padding: 6px 14px; background: #ebf8ff; color: #2b6cb0;
+    border: 1px dashed #90cdf4; border-radius: 5px; font-size: 12px; cursor: pointer;
+    transition: all 0.15s;
+  }
+  .add-row-btn:hover { background: #bee3f8; border-style: solid; }
+
+  .qty-pair-row {
+    display: flex; align-items: center; gap: 12px; background: #f7fafc;
+    padding: 10px 14px; border-radius: 6px; border: 1px solid #e2e8f0;
+  }
+  .qty-pair-row .qty-label {
+    font-size: 12px; font-weight: 600; color: #4a5568; width: 90px; flex-shrink: 0;
+  }
+  .qty-pair-row .pairing-select { flex: 1; }
+  .qty-pair-row .arrow { color: #a0aec0; font-size: 14px; }
+
+  .pairing-footer {
+    display: flex; align-items: center; justify-content: space-between; margin-top: 16px;
+    padding-top: 14px; border-top: 1px solid #edf2f7;
+  }
+  .pairing-status { font-size: 12px; }
+  .pairing-status.ok { color: #2f855a; }
+  .pairing-status.warn { color: #c05621; }
+  .pairing-actions { display: flex; gap: 10px; }
+
+  /* 结果区 */
+  .result-panel {
+    background: #fff; border-radius: 8px; padding: 24px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05); min-height: 200px;
+  }
+  .result-empty { text-align: center; padding: 60px 20px; color: #a0aec0; }
+  .result-empty .icon { font-size: 48px; margin-bottom: 12px; opacity: 0.5; }
+  .result-empty p { font-size: 14px; }
+  .result-header {
+    display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;
+    flex-wrap: wrap; gap: 8px;
+  }
+  .result-header h3 { font-size: 16px; font-weight: 600; color: #1e3a5f; }
+  .result-header .meta { font-size: 12px; color: #718096; }
+  .pairing-info-bar {
+    background: #f7fafc; border: 1px solid #e2e8f0; border-radius: 6px;
+    padding: 10px 14px; margin-bottom: 16px; font-size: 12px; color: #4a5568;
+  }
+  .pairing-info-bar .info-row { margin-bottom: 4px; display: flex; gap: 8px; }
+  .pairing-info-bar .info-row:last-child { margin-bottom: 0; }
+  .pairing-info-bar .info-label {
+    font-weight: 600; color: #2c5282; flex-shrink: 0; min-width: 70px;
+  }
+  .pairing-info-bar .pair-chip {
+    display: inline-block; background: #ebf8ff; color: #2b6cb0; padding: 1px 8px;
+    border-radius: 8px; font-size: 11px; margin-right: 4px;
+  }
+
+  .stats-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 18px;
+  }
+  .stat-card { border-radius: 6px; padding: 14px 16px; text-align: center; }
+  .stat-card.match { background: #f0fff4; border: 1px solid #c6f6d5; }
+  .stat-card.mismatch { background: #fff5f5; border: 1px solid #fed7d7; }
+  .stat-card.only-left { background: #ebf8ff; border: 1px solid #bee3f8; }
+  .stat-card.only-right { background: #faf5ff; border: 1px solid #e9d8fd; }
+  .stat-card .num { font-size: 24px; font-weight: 700; line-height: 1.2; }
+  .stat-card.match .num { color: #2f855a; }
+  .stat-card.mismatch .num { color: #c53030; }
+  .stat-card.only-left .num { color: #2b6cb0; }
+  .stat-card.only-right .num { color: #6b46c1; }
+  .stat-card .lbl { font-size: 12px; color: #4a5568; margin-top: 4px; }
+
+  .filter-bar {
+    display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; align-items: center;
+  }
+  .filter-tag {
+    padding: 5px 14px; border-radius: 16px; font-size: 12px; cursor: pointer;
+    border: 1px solid #e2e8f0; background: #fff; color: #4a5568; transition: all 0.15s;
+  }
+  .filter-tag:hover { border-color: #2c5282; color: #2c5282; }
+  .filter-tag.active { background: #2c5282; color: #fff; border-color: #2c5282; }
+  .filter-tag .count { margin-left: 4px; opacity: 0.8; }
+
+  .table-wrap {
+    overflow-x: auto; border: 1px solid #e2e8f0; border-radius: 6px;
+    max-height: 520px; overflow-y: auto;
+  }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead th {
+    background: #f7fafc; color: #2d3748; font-weight: 600; padding: 10px 14px;
+    text-align: left; border-bottom: 2px solid #e2e8f0; position: sticky; top: 0;
+    white-space: nowrap; z-index: 1;
+  }
+  tbody td { padding: 9px 14px; border-bottom: 1px solid #edf2f7; color: #4a5568; }
+  tbody tr:hover { background: #f7fafc; }
+  .status-badge {
+    display: inline-block; padding: 2px 10px; border-radius: 10px; font-size: 11px;
+    font-weight: 500; white-space: nowrap;
+  }
+  .status-match { background: #c6f6d5; color: #22543d; }
+  .status-mismatch { background: #fed7d7; color: #742a2a; }
+  .status-only-left { background: #bee3f8; color: #2a4365; }
+  .status-only-right { background: #e9d8fd; color: #44337a; }
+  .qty-diff { color: #c53030; font-weight: 600; }
+  .qty-same { color: #2f855a; }
+  .empty-cell { color: #cbd5e0; font-style: italic; }
+
+  .pagination {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-top: 14px; font-size: 12px; color: #718096;
+  }
+  .page-controls { display: flex; gap: 6px; align-items: center; }
+  .page-btn {
+    padding: 4px 10px; border: 1px solid #e2e8f0; background: #fff; border-radius: 4px;
+    cursor: pointer; font-size: 12px; color: #4a5568;
+  }
+  .page-btn:hover:not(:disabled) { border-color: #2c5282; color: #2c5282; }
+  .page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .page-btn.active { background: #2c5282; color: #fff; border-color: #2c5282; }
+
+  .toast {
+    position: fixed; top: 20px; right: 20px; padding: 12px 20px; border-radius: 6px;
+    color: #fff; font-size: 13px; z-index: 9999; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    transform: translateX(120%); transition: transform 0.3s ease; max-width: 420px;
+  }
+  .toast.show { transform: translateX(0); }
+  .toast.success { background: #38a169; }
+  .toast.error { background: #e53e3e; }
+  .toast.info { background: #3182ce; }
+  .toast.warning { background: #dd6b20; }
+
+  @media (max-width: 1100px) {
+    .upload-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 640px) {
+    .upload-grid { grid-template-columns: 1fr; }
+    .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    .container { padding: 16px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Excel 数据核对工具</h1>
+  <p>任意两表比对 · 灵活字段配对 · 自定义联合主键 · 纯前端本地处理</p>
+</div>
+
+<div class="container">
+  <!-- 第一步：上传 -->
+  <div class="section-title">
+    <span class="step-badge">第一步</span>
+    上传数据文件（A / B / C / D）
+  </div>
+  <div class="upload-grid">
+    <div class="sheet-card" id="card-A">
+      <div class="card-head">
+        <span class="icon">📄</span>
+        <div class="info">
+          <div class="name">A 表</div>
+          <div class="sub">可作为左表或右表</div>
+        </div>
+        <span class="status-dot" id="dot-A"></span>
+        <button class="remove-btn" onclick="removeFile('A')" title="移除">×</button>
+      </div>
+      <div class="card-body">
+        <div class="upload-placeholder">
+          <div class="big-icon">📁</div>
+          <div>点击上传 A 表</div>
+          <label class="upload-btn" onclick="event.stopPropagation(); document.getElementById('file-A').click()">选择文件</label>
+        </div>
+        <div class="sheet-info">
+          <div class="file-meta">
+            <span class="fn" id="filename-A"></span>
+            <span id="rowcount-A"></span>
+          </div>
+          <div class="fields-label">字段列表（<span id="fieldcount-A">0</span>）</div>
+          <div class="fields-tags" id="fields-A"></div>
+        </div>
+      </div>
+      <input type="file" id="file-A" accept=".xlsx,.xls" onchange="handleFile(event,'A')">
+    </div>
+
+    <div class="sheet-card" id="card-B">
+      <div class="card-head">
+        <span class="icon">📄</span>
+        <div class="info">
+          <div class="name">B 表</div>
+          <div class="sub">可作为左表或右表</div>
+        </div>
+        <span class="status-dot" id="dot-B"></span>
+        <button class="remove-btn" onclick="removeFile('B')" title="移除">×</button>
+      </div>
+      <div class="card-body">
+        <div class="upload-placeholder">
+          <div class="big-icon">📁</div>
+          <div>点击上传 B 表</div>
+          <label class="upload-btn" onclick="event.stopPropagation(); document.getElementById('file-B').click()">选择文件</label>
+        </div>
+        <div class="sheet-info">
+          <div class="file-meta">
+            <span class="fn" id="filename-B"></span>
+            <span id="rowcount-B"></span>
+          </div>
+          <div class="fields-label">字段列表（<span id="fieldcount-B">0</span>）</div>
+          <div class="fields-tags" id="fields-B"></div>
+        </div>
+      </div>
+      <input type="file" id="file-B" accept=".xlsx,.xls" onchange="handleFile(event,'B')">
+    </div>
+
+    <div class="sheet-card" id="card-C">
+      <div class="card-head">
+        <span class="icon">📄</span>
+        <div class="info">
+          <div class="name">C 表</div>
+          <div class="sub">可作为左表或右表</div>
+        </div>
+        <span class="status-dot" id="dot-C"></span>
+        <button class="remove-btn" onclick="removeFile('C')" title="移除">×</button>
+      </div>
+      <div class="card-body">
+        <div class="upload-placeholder">
+          <div class="big-icon">📁</div>
+          <div>点击上传 C 表</div>
+          <label class="upload-btn" onclick="event.stopPropagation(); document.getElementById('file-C').click()">选择文件</label>
+        </div>
+        <div class="sheet-info">
+          <div class="file-meta">
+            <span class="fn" id="filename-C"></span>
+            <span id="rowcount-C"></span>
+          </div>
+          <div class="fields-label">字段列表（<span id="fieldcount-C">0</span>）</div>
+          <div class="fields-tags" id="fields-C"></div>
+        </div>
+      </div>
+      <input type="file" id="file-C" accept=".xlsx,.xls" onchange="handleFile(event,'C')">
+    </div>
+
+    <div class="sheet-card" id="card-D">
+      <div class="card-head">
+        <span class="icon">📄</span>
+        <div class="info">
+          <div class="name">D 表</div>
+          <div class="sub">可作为左表或右表</div>
+        </div>
+        <span class="status-dot" id="dot-D"></span>
+        <button class="remove-btn" onclick="removeFile('D')" title="移除">×</button>
+      </div>
+      <div class="card-body">
+        <div class="upload-placeholder">
+          <div class="big-icon">📁</div>
+          <div>点击上传 D 表</div>
+          <label class="upload-btn" onclick="event.stopPropagation(); document.getElementById('file-D').click()">选择文件</label>
+        </div>
+        <div class="sheet-info">
+          <div class="file-meta">
+            <span class="fn" id="filename-D"></span>
+            <span id="rowcount-D"></span>
+          </div>
+          <div class="fields-label">字段列表（<span id="fieldcount-D">0</span>）</div>
+          <div class="fields-tags" id="fields-D"></div>
+        </div>
+      </div>
+      <input type="file" id="file-D" accept=".xlsx,.xls" onchange="handleFile(event,'D')">
+    </div>
+  </div>
+
+  <!-- 第二步：选择比对表 -->
+  <div class="section-title">
+    <span class="step-badge">第二步</span>
+    选择要比对的两个表
+  </div>
+  <div class="action-bar">
+    <div class="table-select-group">
+      <span class="table-select-label">左表：</span>
+      <select class="table-select" id="left-table-select" onchange="onTableSelectChange()"></select>
+    </div>
+    <span class="swap-icon" onclick="swapTables()" title="交换左右表">⇄</span>
+    <div class="table-select-group">
+      <span class="table-select-label">右表：</span>
+      <select class="table-select" id="right-table-select" onchange="onTableSelectChange()"></select>
+    </div>
+    <button class="btn btn-primary" id="btn-config" onclick="openPairing()" disabled>🔗 配置字段配对</button>
+    <div class="divider"></div>
+    <button class="btn btn-success" id="btn-export" onclick="exportResult()" disabled>📥 导出结果</button>
+    <button class="btn btn-ghost" onclick="clearResult()">清空结果</button>
+    <span class="action-hint" id="action-hint">请先上传至少两个文件，然后选择左表和右表</span>
+  </div>
+
+  <!-- 快捷组合 -->
+  <div class="quick-pairs" id="quick-pairs">
+    <span style="font-size:12px;color:#a0aec0;align-self:center;margin-right:4px;">快捷选择：</span>
+    <button class="quick-pair-btn" onclick="quickSelect('A','B')">A ⇄ B</button>
+    <button class="quick-pair-btn" onclick="quickSelect('A','C')">A ⇄ C</button>
+    <button class="quick-pair-btn" onclick="quickSelect('A','D')">A ⇄ D</button>
+    <button class="quick-pair-btn" onclick="quickSelect('B','C')">B ⇄ C</button>
+    <button class="quick-pair-btn" onclick="quickSelect('B','D')">B ⇄ D</button>
+    <button class="quick-pair-btn" onclick="quickSelect('C','D')">C ⇄ D</button>
+  </div>
+
+  <!-- 字段配对配置面板 -->
+  <div class="pairing-panel" id="pairing-panel">
+    <div class="pairing-header">
+      <div>
+        <h3 id="pairing-title">字段配对配置</h3>
+        <div class="desc" id="pairing-desc">请将左表字段与右表字段一一配对，可添加多组组成联合主键</div>
+      </div>
+      <button class="pairing-close" onclick="closePairing()">×</button>
+    </div>
+
+    <div class="pairing-section">
+      <div class="pairing-section-title">
+        <span class="num-badge">1</span>
+        联合主键字段配对
+        <span class="tip">（可添加多组，按顺序组合成联合主键；字段名不一致时手动选择对应列）</span>
+      </div>
+      <table class="pairing-table">
+        <thead>
+          <tr>
+            <th class="col-left" id="pairing-col-left-header">左表字段</th>
+            <th class="col-arrow"></th>
+            <th class="col-right" id="pairing-col-right-header">右表字段</th>
+            <th class="col-del">操作</th>
+          </tr>
+        </thead>
+        <tbody id="key-pairing-body"></tbody>
+      </table>
+      <button class="add-row-btn" onclick="addKeyPair()">+ 添加一组主键字段</button>
+    </div>
+
+    <div class="pairing-section">
+      <div class="pairing-section-title">
+        <span class="num-badge">2</span>
+        数量字段配对
+        <span class="tip">（用于比对双方数量是否一致）</span>
+      </div>
+      <div class="qty-pair-row">
+        <span class="qty-label" id="qty-left-label">左表数量列</span>
+        <select class="pairing-select" id="qty-left-select" onchange="updateQtyPair('left', this.value)"></select>
+        <span class="arrow">⇄</span>
+        <span class="qty-label" id="qty-right-label">右表数量列</span>
+        <select class="pairing-select" id="qty-right-select" onchange="updateQtyPair('right', this.value)"></select>
+      </div>
+    </div>
+
+    <div class="pairing-footer">
+      <div class="pairing-status" id="pairing-status"></div>
+      <div class="pairing-actions">
+        <button class="btn btn-ghost btn-sm" onclick="resetPairing()">重置配对</button>
+        <button class="btn btn-primary btn-sm" id="btn-do-reconcile" onclick="doReconcile()" disabled>▶ 开始核对</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 第三步：结果 -->
+  <div class="section-title">
+    <span class="step-badge">第三步</span>
+    核对结果
+  </div>
+  <div class="result-panel">
+    <div class="result-empty" id="result-empty">
+      <div class="icon">📊</div>
+      <p>上传文件、选择比对表、配置字段配对并点击开始核对后，结果将显示在这里</p>
+    </div>
+    <div id="result-content" style="display:none;">
+      <div class="result-header">
+        <h3 id="result-title">核对结果</h3>
+        <span class="meta" id="result-meta"></span>
+      </div>
+      <div class="pairing-info-bar" id="pairing-info-bar"></div>
+      <div class="stats-grid" id="stats-grid"></div>
+      <div class="filter-bar" id="filter-bar"></div>
+      <div class="table-wrap">
+        <table id="result-table">
+          <thead id="result-thead"></thead>
+          <tbody id="result-tbody"></tbody>
+        </table>
+      </div>
+      <div class="pagination" id="pagination"></div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ============ 全局状态 ============
+const store = {
+  data: { A: null, B: null, C: null, D: null },
+  headers: { A: [], B: [], C: [], D: [] },
+  fileName: { A: '', B: '', C: '', D: '' },
+  // 配对配置按需创建，key为左表+右表，如 "AB"、"CD"
+  pairing: {},
+  activeMode: null,      // 如 "AB"
+  currentResult: null,
+  currentFilter: 'all',
+  currentPage: 1,
+  pageSize: 50
+};
+
+function getPairing(mode) {
+  if (!store.pairing[mode]) {
+    store.pairing[mode] = {
+      keys: [{ left: '', right: '' }],
+      qty: { left: '', right: '' }
+    };
+  }
+  return store.pairing[mode];
+}
+
+// ============ Toast ============
+function showToast(msg, type) {
+  type = type || 'info';
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast ' + type + ' show';
+  clearTimeout(t._timer);
+  t._timer = setTimeout(function () { t.className = 'toast ' + type; }, 3200);
+}
+
+// ============ 文件上传与解析 ============
+function handleFile(event, sheetKey) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function (e) {
+    try {
+      const data = new Uint8Array(e.target.result);
+      const workbook = XLSX.read(data, { type: 'array' });
+      const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+      const headerRow = XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: '' })[0] || [];
+      const headers = headerRow.map(function (h) { return String(h).trim(); }).filter(function (h) { return h !== ''; });
+      if (headers.length === 0) {
+        showToast(sheetKey + ' 表无法识别表头，请检查文件格式', 'error');
+        return;
+      }
+      const rows = XLSX.utils.sheet_to_json(firstSheet, { defval: '' });
+      const normalized = rows.map(function (row) {
+        const obj = {};
+        Object.keys(row).forEach(function (k) { obj[k.trim()] = row[k]; });
+        return obj;
+      });
+
+      store.data[sheetKey] = normalized;
+      store.headers[sheetKey] = headers;
+      store.fileName[sheetKey] = file.name;
+
+      document.getElementById('card-' + sheetKey).classList.add('loaded');
+      // 更新卡片标题为文件名（去掉扩展名），副标题保留槽位标识
+      const cardNameEl = document.querySelector('#card-' + sheetKey + ' .name');
+      const cardSubEl = document.querySelector('#card-' + sheetKey + ' .sub');
+      const displayName = file.name.replace(/\.[^/.]+$/, '');
+      if (cardNameEl) {
+        cardNameEl.textContent = displayName;
+        cardNameEl.title = file.name;
+      }
+      if (cardSubEl) {
+        cardSubEl.textContent = sheetKey + ' 表 · 可作为左表或右表';
+      }
+      document.getElementById('filename-' + sheetKey).textContent = file.name;
+      document.getElementById('rowcount-' + sheetKey).textContent = normalized.length + ' 行';
+      document.getElementById('fieldcount-' + sheetKey).textContent = headers.length;
+      document.getElementById('fields-' + sheetKey).innerHTML =
+        headers.map(function (h) { return '<span class="field-tag">' + escapeHtml(h) + '</span>'; }).join('');
+
+      // 如果配对面板已打开且涉及该表，刷新
+      if (store.activeMode) {
+        const leftKey = store.activeMode[0];
+        const rightKey = store.activeMode[1];
+        if (sheetKey === leftKey || sheetKey === rightKey) {
+          renderPairingPanel();
+        }
+      }
+
+      refreshTableSelectOptions();
+      updateActionButtons();
+      showToast(sheetKey + ' 表解析成功，共 ' + normalized.length + ' 行，' + headers.length + ' 个字段', 'success');
+    } catch (err) {
+      console.error(err);
+      showToast(sheetKey + ' 表解析失败：' + err.message, 'error');
+    }
+  };
+  reader.onerror = function () { showToast('文件读取失败', 'error'); };
+  reader.readAsArrayBuffer(file);
+}
+
+function removeFile(sheetKey) {
+  store.data[sheetKey] = null;
+  store.headers[sheetKey] = [];
+  store.fileName[sheetKey] = '';
+  document.getElementById('file-' + sheetKey).value = '';
+  document.getElementById('card-' + sheetKey).classList.remove('loaded');
+  // 恢复卡片标题为槽位名
+  const cardNameEl2 = document.querySelector('#card-' + sheetKey + ' .name');
+  const cardSubEl2 = document.querySelector('#card-' + sheetKey + ' .sub');
+  if (cardNameEl2) {
+    cardNameEl2.textContent = sheetKey + ' 表';
+    cardNameEl2.title = '';
+  }
+  if (cardSubEl2) {
+    cardSubEl2.textContent = '可作为左表或右表';
+  }
+  document.getElementById('fields-' + sheetKey).innerHTML = '';
+  document.getElementById('fieldcount-' + sheetKey).textContent = '0';
+  // 清除涉及该表的配对配置
+  Object.keys(store.pairing).forEach(function (mode) {
+    if (mode.includes(sheetKey)) delete store.pairing[mode];
+  });
+  if (store.activeMode && store.activeMode.includes(sheetKey)) {
+    closePairing();
+  }
+  // 如果下拉框选中了被移除的表，清空
+  if (document.getElementById('left-table-select').value === sheetKey) {
+    document.getElementById('left-table-select').value = '';
+  }
+  if (document.getElementById('right-table-select').value === sheetKey) {
+    document.getElementById('right-table-select').value = '';
+  }
+  updateQuickPairButtons();
+  refreshTableSelectOptions();
+  updateActionButtons();
+}
+
+// ============ 表选择 ============
+function onTableSelectChange() {
+  updateQuickPairButtons();
+  updateActionButtons();
+}
+
+function quickSelect(left, right) {
+  if (!store.data[left] || !store.data[right]) {
+    showToast('请先上传 ' + left + ' 表和 ' + right + ' 表', 'warning');
+    return;
+  }
+  document.getElementById('left-table-select').value = left;
+  document.getElementById('right-table-select').value = right;
+  updateQuickPairButtons();
+  updateActionButtons();
+  openPairing();
+}
+
+function swapTables() {
+  const leftSel = document.getElementById('left-table-select');
+  const rightSel = document.getElementById('right-table-select');
+  const tmp = leftSel.value;
+  leftSel.value = rightSel.value;
+  rightSel.value = tmp;
+  updateQuickPairButtons();
+  updateActionButtons();
+}
+
+function updateQuickPairButtons() {
+  const left = document.getElementById('left-table-select').value;
+  const right = document.getElementById('right-table-select').value;
+  document.querySelectorAll('.quick-pair-btn').forEach(function (btn) {
+    btn.classList.remove('active');
+  });
+  if (left && right) {
+    document.querySelectorAll('.quick-pair-btn').forEach(function (btn) {
+      const text = btn.textContent.replace(/\s/g, '');
+      if (text === left + '⇄' + right) btn.classList.add('active');
+    });
+  }
+}
+
+function updateActionButtons() {
+  const left = document.getElementById('left-table-select').value;
+  const right = document.getElementById('right-table-select').value;
+  const btnConfig = document.getElementById('btn-config');
+  const hint = document.getElementById('action-hint');
+
+  if (!left || !right) {
+    btnConfig.disabled = true;
+    hint.textContent = '请先上传至少两个文件，然后选择左表和右表';
+    return;
+  }
+  if (left === right) {
+    btnConfig.disabled = true;
+    hint.textContent = '左表和右表不能相同，请重新选择';
+    return;
+  }
+  if (!store.data[left] || !store.data[right]) {
+    btnConfig.disabled = true;
+    hint.textContent = '所选的表尚未上传，请先上传文件';
+    return;
+  }
+  btnConfig.disabled = false;
+  hint.textContent = '已选择 ' + left + ' 表 ⇄ ' + right + ' 表，点击配置字段配对';
+}
+
+// 动态刷新下拉框选项（已上传的显示槽位+文件名，未上传的置灰）
+function refreshTableSelectOptions() {
+  ['left-table-select', 'right-table-select'].forEach(function (selectId) {
+    const sel = document.getElementById(selectId);
+    const currentVal = sel.value;
+    let html = '<option value="">-- 选择 --</option>';
+    ['A', 'B', 'C', 'D'].forEach(function (key) {
+      const uploaded = store.data[key] !== null;
+      const fileName = store.fileName[key] || '';
+      const displayName = fileName ? fileName.replace(/\.[^/.]+$/, '') : '';
+      const label = uploaded
+        ? key + ' 表 · ' + displayName
+        : key + ' 表（未上传）';
+      html += '<option value="' + key + '" ' +
+        (uploaded ? '' : 'disabled') + '>' + label + '</option>';
+    });
+    sel.innerHTML = html;
+    // 恢复之前的选择（如果仍有效）
+    if (currentVal && store.data[currentVal]) {
+      sel.value = currentVal;
+    }
+  });
+}
+
+// ============ 字段配对面板 ============
+function openPairing() {
+  const left = document.getElementById('left-table-select').value;
+  const right = document.getElementById('right-table-select').value;
+  if (!left || !right || left === right) {
+    showToast('请先选择两个不同的表', 'warning');
+    return;
+  }
+  if (!store.data[left] || !store.data[right]) {
+    showToast('所选的表尚未上传', 'warning');
+    return;
+  }
+  const mode = left + right;
+  store.activeMode = mode;
+
+  document.getElementById('pairing-title').textContent =
+    left + ' 表 ⇄ ' + right + ' 表 · 字段配对配置';
+  document.getElementById('pairing-desc').textContent =
+    '请将 ' + left + ' 表字段与 ' + right + ' 表字段一一配对；字段名不一致时手动选择对应列，可添加多组组成联合主键';
+  document.getElementById('pairing-col-left-header').textContent = left + ' 表字段';
+  document.getElementById('pairing-col-right-header').textContent = right + ' 表字段';
+  document.getElementById('qty-left-label').textContent = left + ' 表数量列';
+  document.getElementById('qty-right-label').textContent = right + ' 表数量列';
+
+  renderPairingPanel();
+  document.getElementById('pairing-panel').classList.add('show');
+  setTimeout(function () {
+    document.getElementById('pairing-panel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, 100);
+}
+
+function closePairing() {
+  store.activeMode = null;
+  document.getElementById('pairing-panel').classList.remove('show');
+}
+
+function renderPairingPanel() {
+  const mode = store.activeMode;
+  const leftKey = mode[0];
+  const rightKey = mode[1];
+  const p = getPairing(mode);
+  const leftHeaders = store.headers[leftKey];
+  const rightHeaders = store.headers[rightKey];
+
+  // 主键配对行
+  const tbody = document.getElementById('key-pairing-body');
+  let html = '';
+  p.keys.forEach(function (pair, idx) {
+    const leftDup = p.keys.filter(function (x, i) { return i !== idx && x.left === pair.left && x.left !== ''; }).length > 0;
+    const rightDup = p.keys.filter(function (x, i) { return i !== idx && x.right === pair.right && x.right !== ''; }).length > 0;
+    html += '<tr>';
+    html += '<td class="col-left"><select class="pairing-select ' + (pair.left ? '' : 'unmapped') + (leftDup ? ' duplicate' : '') +
+      '" onchange="updateKeyPair(' + idx + ',\'left\',this.value)">';
+    html += '<option value="">-- 选择 ' + leftKey + ' 表字段 --</option>';
+    leftHeaders.forEach(function (h) {
+      html += '<option value="' + escapeAttr(h) + '" ' + (h === pair.left ? 'selected' : '') + '>' + escapeHtml(h) + '</option>';
+    });
+    html += '</select></td>';
+    html += '<td class="col-arrow">⇄</td>';
+    html += '<td class="col-right"><select class="pairing-select ' + (pair.right ? '' : 'unmapped') + (rightDup ? ' duplicate' : '') +
+      '" onchange="updateKeyPair(' + idx + ',\'right\',this.value)">';
+    html += '<option value="">-- 选择 ' + rightKey + ' 表字段 --</option>';
+    rightHeaders.forEach(function (h) {
+      html += '<option value="' + escapeAttr(h) + '" ' + (h === pair.right ? 'selected' : '') + '>' + escapeHtml(h) + '</option>';
+    });
+    html += '</select></td>';
+    html += '<td class="col-del"><button class="btn-danger-sm" onclick="removeKeyPair(' + idx + ')" ' +
+      (p.keys.length <= 1 ? 'disabled style="opacity:0.3;cursor:not-allowed;"' : '') + '>删除</button></td>';
+    html += '</tr>';
+  });
+  tbody.innerHTML = html;
+
+  // 数量配对
+  const qtyLeftSelect = document.getElementById('qty-left-select');
+  let qtyLeftHTML = '<option value="">-- 选择 ' + leftKey + ' 表数量列 --</option>';
+  leftHeaders.forEach(function (h) {
+    qtyLeftHTML += '<option value="' + escapeAttr(h) + '" ' + (h === p.qty.left ? 'selected' : '') + '>' + escapeHtml(h) + '</option>';
+  });
+  qtyLeftSelect.innerHTML = qtyLeftHTML;
+  qtyLeftSelect.className = 'pairing-select' + (p.qty.left ? '' : ' unmapped');
+
+  const qtyRightSelect = document.getElementById('qty-right-select');
+  let qtyRightHTML = '<option value="">-- 选择 ' + rightKey + ' 表数量列 --</option>';
+  rightHeaders.forEach(function (h) {
+    qtyRightHTML += '<option value="' + escapeAttr(h) + '" ' + (h === p.qty.right ? 'selected' : '') + '>' + escapeHtml(h) + '</option>';
+  });
+  qtyRightSelect.innerHTML = qtyRightHTML;
+  qtyRightSelect.className = 'pairing-select' + (p.qty.right ? '' : ' unmapped');
+
+  updatePairingStatus();
+}
+
+function updateKeyPair(idx, side, value) {
+  const mode = store.activeMode;
+  const p = getPairing(mode);
+  p.keys[idx][side] = value;
+  renderPairingPanel();
+}
+
+function updateQtyPair(side, value) {
+  const mode = store.activeMode;
+  const p = getPairing(mode);
+  p.qty[side] = value;
+  renderPairingPanel();
+}
+
+function addKeyPair() {
+  const mode = store.activeMode;
+  const p = getPairing(mode);
+  p.keys.push({ left: '', right: '' });
+  renderPairingPanel();
+}
+
+function removeKeyPair(idx) {
+  const mode = store.activeMode;
+  const p = getPairing(mode);
+  if (p.keys.length <= 1) return;
+  p.keys.splice(idx, 1);
+  renderPairingPanel();
+}
+
+function resetPairing() {
+  const mode = store.activeMode;
+  store.pairing[mode] = {
+    keys: [{ left: '', right: '' }],
+    qty: { left: '', right: '' }
+  };
+  renderPairingPanel();
+  showToast('配对已重置', 'info');
+}
+
+function updatePairingStatus() {
+  const mode = store.activeMode;
+  const leftKey = mode[0];
+  const rightKey = mode[1];
+  const p = getPairing(mode);
+  const statusEl = document.getElementById('pairing-status');
+  const btn = document.getElementById('btn-do-reconcile');
+
+  const issues = [];
+  p.keys.forEach(function (pair, idx) {
+    if (!pair.left) issues.push('第 ' + (idx + 1) + ' 组主键：' + leftKey + ' 表字段未选择');
+    if (!pair.right) issues.push('第 ' + (idx + 1) + ' 组主键：' + rightKey + ' 表字段未选择');
+  });
+  const leftVals = p.keys.map(function (x) { return x.left; }).filter(function (x) { return x; });
+  const rightVals = p.keys.map(function (x) { return x.right; }).filter(function (x) { return x; });
+  if (new Set(leftVals).size !== leftVals.length) issues.push(leftKey + ' 表主键字段存在重复选择');
+  if (new Set(rightVals).size !== rightVals.length) issues.push(rightKey + ' 表主键字段存在重复选择');
+  if (!p.qty.left) issues.push(leftKey + ' 表数量列未选择');
+  if (!p.qty.right) issues.push(rightKey + ' 表数量列未选择');
+
+  if (issues.length > 0) {
+    statusEl.className = 'pairing-status warn';
+    statusEl.innerHTML = '⚠ ' + issues[0] + (issues.length > 1 ? ' 等 ' + issues.length + ' 项待完成' : '');
+    btn.disabled = true;
+  } else {
+    statusEl.className = 'pairing-status ok';
+    statusEl.innerHTML = '✓ 配对完成，共 ' + p.keys.length + ' 组联合主键字段，可以开始核对';
+    btn.disabled = false;
+  }
+}
+
+// ============ 核对核心逻辑 ============
+function buildKey(row, colNames) {
+  return colNames.map(function (c) {
+    let v = row[c];
+    if (v === null || v === undefined) v = '';
+    return String(v).trim();
+  }).join('|||');
+}
+
+function toNum(v) {
+  if (v === '' || v === null || v === undefined) return null;
+  const n = Number(v);
+  return isNaN(n) ? null : n;
+}
+
+function doReconcile() {
+  const mode = store.activeMode;
+  const leftKey = mode[0];
+  const rightKey = mode[1];
+  const p = getPairing(mode);
+
+  // 最终校验
+  const issues = [];
+  p.keys.forEach(function (pair, idx) {
+    if (!pair.left || !pair.right) issues.push('第 ' + (idx + 1) + ' 组主键配对不完整');
+  });
+  if (!p.qty.left || !p.qty.right) issues.push('数量配对不完整');
+  if (issues.length > 0) {
+    showToast('无法核对：' + issues[0], 'warning');
+    return;
+  }
+
+  const leftRows = store.data[leftKey];
+  const rightRows = store.data[rightKey];
+  const leftKeyCols = p.keys.map(function (k) { return k.left; });
+  const rightKeyCols = p.keys.map(function (k) { return k.right; });
+  const leftQtyCol = p.qty.left;
+  const rightQtyCol = p.qty.right;
+
+  // 构建右侧索引
+  const rightMap = new Map();
+  rightRows.forEach(function (row, idx) {
+    const key = buildKey(row, rightKeyCols);
+    if (!rightMap.has(key)) rightMap.set(key, []);
+    rightMap.get(key).push({ row: row, idx: idx, _used: false });
+  });
+
+  const results = [];
+
+  // 遍历左侧
+  leftRows.forEach(function (lRow) {
+    const key = buildKey(lRow, leftKeyCols);
+    const lQty = toNum(lRow[leftQtyCol]);
+    const matches = rightMap.get(key);
+
+    if (matches && matches.length > 0) {
+      let matched = null;
+      for (var i = 0; i < matches.length; i++) {
+        if (!matches[i]._used) { matched = matches[i]; matches[i]._used = true; break; }
+      }
+      if (matched) {
+        const rQty = toNum(matched.row[rightQtyCol]);
+        const qtyEqual = lQty !== null && rQty !== null && lQty === rQty;
+        results.push({
+          status: qtyEqual ? 'match' : 'mismatch',
+          keyValues: leftKeyCols.map(function (c) { return lRow[c]; }),
+          leftQty: lQty,
+          rightQty: rQty
+        });
+      } else {
+        results.push({
+          status: 'only-left',
+          keyValues: leftKeyCols.map(function (c) { return lRow[c]; }),
+          leftQty: lQty,
+          rightQty: null
+        });
+      }
+    } else {
+      results.push({
+        status: 'only-left',
+        keyValues: leftKeyCols.map(function (c) { return lRow[c]; }),
+        leftQty: lQty,
+        rightQty: null
+      });
+    }
+  });
+
+  // 仅右侧存在
+  rightRows.forEach(function (rRow, idx) {
+    const key = buildKey(rRow, rightKeyCols);
+    const matches = rightMap.get(key);
+    const thisMatch = matches.find(function (m) { return m.idx === idx; });
+    if (thisMatch && !thisMatch._used) {
+      const rQty = toNum(rRow[rightQtyCol]);
+      results.push({
+        status: 'only-right',
+        keyValues: rightKeyCols.map(function (c) { return rRow[c]; }),
+        leftQty: null,
+        rightQty: rQty
+      });
+    }
+  });
+
+  store.currentResult = {
+    mode: mode,
+    leftName: leftKey,
+    rightName: rightKey,
+    keyPairs: p.keys.map(function (k) { return { left: k.left, right: k.right }; }),
+    qtyPair: { left: p.qty.left, right: p.qty.right },
+    results: results,
+    summary: {
+      total: results.length,
+      match: results.filter(function (r) { return r.status === 'match'; }).length,
+      mismatch: results.filter(function (r) { return r.status === 'mismatch'; }).length,
+      onlyLeft: results.filter(function (r) { return r.status === 'only-left'; }).length,
+      onlyRight: results.filter(function (r) { return r.status === 'only-right'; }).length
+    },
+    leftCount: leftRows.length,
+    rightCount: rightRows.length
+  };
+
+  store.currentFilter = 'all';
+  store.currentPage = 1;
+  renderResult();
+  document.getElementById('btn-export').disabled = false;
+  closePairing();
+
+  const s = store.currentResult.summary;
+  showToast(
+    '核对完成：匹配 ' + s.match + ' / 数量不一致 ' + s.mismatch +
+    ' / 仅' + leftKey + '表 ' + s.onlyLeft + ' / 仅' + rightKey + '表 ' + s.onlyRight,
+    'success'
+  );
+  setTimeout(function () {
+    document.getElementById('result-content').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, 200);
+}
+
+// ============ 结果渲染 ============
+function renderResult() {
+  const r = store.currentResult;
+  if (!r) return;
+  document.getElementById('result-empty').style.display = 'none';
+  document.getElementById('result-content').style.display = 'block';
+
+  document.getElementById('result-title').textContent =
+    r.leftName + ' 表 与 ' + r.rightName + ' 表 核对结果';
+  document.getElementById('result-meta').textContent =
+    r.leftName + '表 ' + r.leftCount + ' 行 · ' + r.rightName + '表 ' + r.rightCount + ' 行';
+
+  // 配对信息栏
+  let infoHTML = '<div class="info-row"><span class="info-label">联合主键：</span><span>';
+  r.keyPairs.forEach(function (kp) {
+    infoHTML += '<span class="pair-chip">' + escapeHtml(kp.left) + ' ⇄ ' + escapeHtml(kp.right) + '</span>';
+  });
+  infoHTML += '</span></div>';
+  infoHTML += '<div class="info-row"><span class="info-label">数量字段：</span>';
+  infoHTML += '<span class="pair-chip">' + escapeHtml(r.qtyPair.left) + ' ⇄ ' + escapeHtml(r.qtyPair.right) + '</span>';
+  infoHTML += '</span></div>';
+  document.getElementById('pairing-info-bar').innerHTML = infoHTML;
+
+  // 统计卡片
+  const s = r.summary;
+  document.getElementById('stats-grid').innerHTML =
+    '<div class="stat-card match"><div class="num">' + s.match + '</div><div class="lbl">完全匹配</div></div>' +
+    '<div class="stat-card mismatch"><div class="num">' + s.mismatch + '</div><div class="lbl">数量不一致</div></div>' +
+    '<div class="stat-card only-left"><div class="num">' + s.onlyLeft + '</div><div class="lbl">仅在' + r.leftName + '表存在</div></div>' +
+    '<div class="stat-card only-right"><div class="num">' + s.onlyRight + '</div><div class="lbl">仅在' + r.rightName + '表存在</div></div>';
+
+  renderFilterBar();
+  renderTable();
+  renderPagination();
+}
+
+function renderFilterBar() {
+  const r = store.currentResult;
+  const filters = [
+    { key: 'all', label: '全部', count: r.summary.total },
+    { key: 'match', label: '完全匹配', count: r.summary.match },
+    { key: 'mismatch', label: '数量不一致', count: r.summary.mismatch },
+    { key: 'only-left', label: '仅' + r.leftName + '表', count: r.summary.onlyLeft },
+    { key: 'only-right', label: '仅' + r.rightName + '表', count: r.summary.onlyRight }
+  ];
+  document.getElementById('filter-bar').innerHTML = filters.map(function (f) {
+    return '<span class="filter-tag ' + (store.currentFilter === f.key ? 'active' : '') +
+      '" onclick="setFilter(\'' + f.key + '\')">' + f.label +
+      '<span class="count">' + f.count + '</span></span>';
+  }).join('');
+}
+
+function setFilter(key) {
+  store.currentFilter = key;
+  store.currentPage = 1;
+  renderFilterBar();
+  renderTable();
+  renderPagination();
+}
+
+function getFilteredResults() {
+  if (store.currentFilter === 'all') return store.currentResult.results;
+  return store.currentResult.results.filter(function (item) { return item.status === store.currentFilter; });
+}
+
+function statusLabel(status) {
+  const r = store.currentResult;
+  switch (status) {
+    case 'match': return '完全匹配';
+    case 'mismatch': return '数量不一致';
+    case 'only-left': return '仅在' + r.leftName + '表存在';
+    case 'only-right': return '仅在' + r.rightName + '表存在';
+    default: return status;
+  }
+}
+
+function statusClass(status) {
+  switch (status) {
+    case 'match': return 'status-match';
+    case 'mismatch': return 'status-mismatch';
+    case 'only-left': return 'status-only-left';
+    case 'only-right': return 'status-only-right';
+    default: return '';
+  }
+}
+
+function renderTable() {
+  const r = store.currentResult;
+  const keyPairs = r.keyPairs;
+
+  let theadHTML = '<tr><th style="width:55px;">序号</th><th style="width:110px;">核对状态</th>';
+  keyPairs.forEach(function (kp) {
+    theadHTML += '<th>' + escapeHtml(kp.left) + '<br><span style="font-weight:400;color:#a0aec0;font-size:10px;">⇄ ' + escapeHtml(kp.right) + '</span></th>';
+  });
+  theadHTML += '<th>' + r.leftName + '表数量<br><span style="font-weight:400;color:#a0aec0;font-size:10px;">' + escapeHtml(r.qtyPair.left) + '</span></th>';
+  theadHTML += '<th>' + r.rightName + '表数量<br><span style="font-weight:400;color:#a0aec0;font-size:10px;">' + escapeHtml(r.qtyPair.right) + '</span></th>';
+  theadHTML += '<th>差异</th></tr>';
+  document.getElementById('result-thead').innerHTML = theadHTML;
+
+  const filtered = getFilteredResults();
+  const start = (store.currentPage - 1) * store.pageSize;
+  const pageData = filtered.slice(start, start + store.pageSize);
+
+  if (pageData.length === 0) {
+    document.getElementById('result-tbody').innerHTML =
+      '<tr><td colspan="' + (4 + keyPairs.length) + '" style="text-align:center;padding:30px;color:#a0aec0;">当前筛选条件下无数据</td></tr>';
+    return;
+  }
+
+  let tbodyHTML = '';
+  pageData.forEach(function (item, i) {
+    const globalIdx = start + i + 1;
+    tbodyHTML += '<tr>';
+    tbodyHTML += '<td>' + globalIdx + '</td>';
+    tbodyHTML += '<td><span class="status-badge ' + statusClass(item.status) + '">' + statusLabel(item.status) + '</span></td>';
+    item.keyValues.forEach(function (v) {
+      tbodyHTML += '<td>' + (v === '' || v === null || v === undefined ? '<span class="empty-cell">-</span>' : escapeHtml(String(v))) + '</td>';
+    });
+    if (item.leftQty === null) {
+      tbodyHTML += '<td><span class="empty-cell">-</span></td>';
+    } else {
+      var cls = item.status === 'mismatch' ? 'qty-diff' : (item.status === 'match' ? 'qty-same' : '');
+      tbodyHTML += '<td class="' + cls + '">' + item.leftQty + '</td>';
+    }
+    if (item.rightQty === null) {
+      tbodyHTML += '<td><span class="empty-cell">-</span></td>';
+    } else {
+      var cls2 = item.status === 'mismatch' ? 'qty-diff' : (item.status === 'match' ? 'qty-same' : '');
+      tbodyHTML += '<td class="' + cls2 + '">' + item.rightQty + '</td>';
+    }
+    if (item.status === 'mismatch' && item.leftQty !== null && item.rightQty !== null) {
+      var diff = item.leftQty - item.rightQty;
+      tbodyHTML += '<td class="qty-diff">' + (diff > 0 ? '+' : '') + diff + '</td>';
+    } else if (item.status === 'match') {
+      tbodyHTML += '<td class="qty-same">0</td>';
+    } else {
+      tbodyHTML += '<td><span class="empty-cell">-</span></td>';
+    }
+    tbodyHTML += '</tr>';
+  });
+  document.getElementById('result-tbody').innerHTML = tbodyHTML;
+}
+
+function renderPagination() {
+  const filtered = getFilteredResults();
+  const total = filtered.length;
+  const totalPages = Math.max(1, Math.ceil(total / store.pageSize));
+  const start = (store.currentPage - 1) * store.pageSize + 1;
+  const end = Math.min(total, store.currentPage * store.pageSize);
+
+  let pageBtns = '';
+  pageBtns += '<button class="page-btn" onclick="goPage(' + (store.currentPage - 1) + ')" ' +
+    (store.currentPage <= 1 ? 'disabled' : '') + '>上一页</button>';
+
+  let pages = [];
+  if (totalPages <= 7) {
+    for (let i = 1; i <= totalPages; i++) pages.push(i);
+  } else {
+    pages.push(1);
+    if (store.currentPage > 3) pages.push('...');
+    const pStart = Math.max(2, store.currentPage - 1);
+    const pEnd = Math.min(totalPages - 1, store.currentPage + 1);
+    for (let i = pStart; i <= pEnd; i++) pages.push(i);
+    if (store.currentPage < totalPages - 2) pages.push('...');
+    pages.push(totalPages);
+  }
+  pages.forEach(function (p) {
+    if (p === '...') {
+      pageBtns += '<span style="padding:4px 6px;color:#a0aec0;">...</span>';
+    } else {
+      pageBtns += '<button class="page-btn ' + (p === store.currentPage ? 'active' : '') +
+        '" onclick="goPage(' + p + ')">' + p + '</button>';
+    }
+  });
+
+  pageBtns += '<button class="page-btn" onclick="goPage(' + (store.currentPage + 1) + ')" ' +
+    (store.currentPage >= totalPages ? 'disabled' : '') + '>下一页</button>';
+
+  document.getElementById('pagination').innerHTML =
+    '<span>显示第 ' + (total > 0 ? start : 0) + '-' + end + ' 条，共 ' + total + ' 条</span>' +
+    '<span class="page-controls">' + pageBtns + '</span>';
+}
+
+function goPage(p) {
+  const filtered = getFilteredResults();
+  const totalPages = Math.max(1, Math.ceil(filtered.length / store.pageSize));
+  if (p < 1 || p > totalPages) return;
+  store.currentPage = p;
+  renderTable();
+  renderPagination();
+}
+
+// ============ 导出结果 ============
+function exportResult() {
+  const r = store.currentResult;
+  if (!r) { showToast('暂无核对结果可导出', 'error'); return; }
+
+  const headers = ['序号', '核对状态'];
+  r.keyPairs.forEach(function (kp) {
+    headers.push(kp.left + '(' + r.leftName + '表) ⇄ ' + kp.right + '(' + r.rightName + '表)');
+  });
+  headers.push(r.leftName + '表数量(' + r.qtyPair.left + ')', r.rightName + '表数量(' + r.qtyPair.right + ')', '差异');
+
+  const rows = r.results.map(function (item, i) {
+    const row = [i + 1, statusLabel(item.status)];
+    item.keyValues.forEach(function (v) { row.push(v === null || v === undefined ? '' : v); });
+    row.push(item.leftQty === null ? '' : item.leftQty);
+    row.push(item.rightQty === null ? '' : item.rightQty);
+    if (item.status === 'mismatch' && item.leftQty !== null && item.rightQty !== null) {
+      row.push(item.leftQty - item.rightQty);
+    } else if (item.status === 'match') {
+      row.push(0);
+    } else {
+      row.push('');
+    }
+    return row;
+  });
+
+  const s = r.summary;
+  const summaryData = [
+    ['核对项目', r.leftName + '表 与 ' + r.rightName + '表'],
+    [r.leftName + '表文件', store.fileName[r.leftName] || ''],
+    [r.rightName + '表文件', store.fileName[r.rightName] || ''],
+    [r.leftName + '表行数', r.leftCount],
+    [r.rightName + '表行数', r.rightCount],
+    ['', ''],
+    ['联合主键配对', ''],
+  ];
+  r.keyPairs.forEach(function (kp, i) {
+    summaryData.push(['  第' + (i + 1) + '组', kp.left + ' ⇄ ' + kp.right]);
+  });
+  summaryData.push(['数量字段配对', r.qtyPair.left + ' ⇄ ' + r.qtyPair.right]);
+  summaryData.push(['', '']);
+  summaryData.push(['完全匹配', s.match]);
+  summaryData.push(['数量不一致', s.mismatch]);
+  summaryData.push(['仅在' + r.leftName + '表存在', s.onlyLeft]);
+  summaryData.push(['仅在' + r.rightName + '表存在', s.onlyRight]);
+  summaryData.push(['合计', s.total]);
+
+  const wb = XLSX.utils.book_new();
+  const ws1 = XLSX.utils.aoa_to_sheet([headers].concat(rows));
+  ws1['!cols'] = headers.map(function () { return { wch: 16 }; });
+  XLSX.utils.book_append_sheet(wb, ws1, '核对明细');
+
+  const ws2 = XLSX.utils.aoa_to_sheet(summaryData);
+  ws2['!cols'] = [{ wch: 20 }, { wch: 45 }];
+  XLSX.utils.book_append_sheet(wb, ws2, '核对汇总');
+
+  const fileName = '核对结果_' + r.leftName + '与' + r.rightName + '_' + formatDate() + '.xlsx';
+  XLSX.writeFile(wb, fileName);
+  showToast('结果已导出：' + fileName, 'success');
+}
+
+function formatDate() {
+  const d = new Date();
+  return d.getFullYear() + String(d.getMonth() + 1).padStart(2, '0') +
+    String(d.getDate()).padStart(2, '0') + '_' +
+    String(d.getHours()).padStart(2, '0') + String(d.getMinutes()).padStart(2, '0');
+}
+
+// ============ 清空 ============
+function clearResult() {
+  store.currentResult = null;
+  store.currentFilter = 'all';
+  store.currentPage = 1;
+  document.getElementById('result-empty').style.display = 'block';
+  document.getElementById('result-content').style.display = 'none';
+  document.getElementById('btn-export').disabled = true;
+  showToast('结果已清空', 'info');
+}
+
+// ============ 工具函数 ============
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+function escapeAttr(str) {
+  return String(str).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+// 初始化
+refreshTableSelectOptions();
+updateActionButtons();
+</script>
+</body>
+</html>
