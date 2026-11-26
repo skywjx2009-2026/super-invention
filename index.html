@@ -18,12 +18,15 @@
 </section>
 <section id="bills" class="page">
 <div class="section"><h2>账单分类</h2><span>按年月查看账单与分类统计</span></div>
-<div class="card"><details id="billFilterPanel" class="bi-filter-panel"><summary>筛选条件 <span>按需展开 / 收起　⌄</span></summary><div style="margin-top:13px">
+<div class="card" style="padding:12px">
+<div style="font-size:13px;font-weight:700;margin-bottom:8px">年份</div>
+<div id="billYearTags" style="display:flex;gap:7px;overflow-x:auto;white-space:nowrap;padding:1px 0 10px;scrollbar-width:none"></div>
+<div style="font-size:13px;font-weight:700;margin-bottom:8px">月份</div>
+<div id="billMonthTags" style="display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px;padding:1px 0 12px"></div>
 <input id="billSearch" placeholder="搜索交易对象、商品或备注" oninput="renderBills()" style="width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;background:white">
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:11px">
-<label class="muted">年份<select id="billYear" onchange="renderBills()" style="display:block;width:100%;padding:10px;border:1px solid var(--line);border-radius:9px;margin-top:5px;background:white"><option value="">全部年份</option></select></label>
-<label class="muted">月份<select id="billMonth" onchange="renderBills()" style="display:block;width:100%;padding:10px;border:1px solid var(--line);border-radius:9px;margin-top:5px;background:white"><option value="">全部月份</option><option value="01">1月</option><option value="02">2月</option><option value="03">3月</option><option value="04">4月</option><option value="05">5月</option><option value="06">6月</option><option value="07">7月</option><option value="08">8月</option><option value="09">9月</option><option value="10">10月</option><option value="11">11月</option><option value="12">12月</option></select></label></div>
-<button type="button" onclick="resetBillFilters()" style="margin-top:10px;border:0;background:#f1f3f7;color:#475467;border-radius:9px;padding:8px 12px">重置筛选</button></div></details>
+<select id="billYear" style="display:none"><option value="">全部年份</option></select>
+<select id="billMonth" style="display:none"><option value="">全部月份</option></select>
+</div>
 <p class="muted" id="billCount">本机已保存账单</p>
 <div class="stats"><div class="stat"><small>账单总数</small><b id="catTotal">0</b></div><div class="stat"><small>已分类</small><b id="catDone">0</b></div><div class="stat"><small>未分类</small><b id="catPending">0</b></div></div>
 <button onclick="autoClassifyBills()" style="border:0;border-radius:10px;background:#3978f6;color:white;padding:12px;width:100%;font-size:14px">自动分类未分类账单</button>
@@ -400,6 +403,8 @@ window.renderCategorySummary=function(){
  const box=document.getElementById('categoryDetails');if(box){const owners=OWNER_OPTIONS_V2.map(o=>{const a=b.filter(x=>x.direction==='支出'&&categoryOfV2(x)!=='未分类'&&ownerOfV2(x)===o);return '<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line);font-size:13px"><span>'+(o==='未指定'?'<span class="owner-pending">未指定</span>':o)+'（'+a.length+'笔）</span><b>'+money(a.reduce((s,x)=>s+expenseNetAmount(x),0))+'</b></div>'}).join('');box.innerHTML='<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px"><span class="pending-badge">🔴 一级未分类 '+pending+' 笔</span><span class="owner-pending">🟠 二级未指定 '+unspecified+' 笔</span></div><b>按消费归属汇总（支出）</b>'+owners}
 };
 window.showCategoryDetails=function(encodedCategory,direction){const c=decodeURIComponent(encodedCategory),rows=(window.billFilteredRows||getSavedBills()).filter(x=>x.direction===direction&&(c==='未分类'?categoryOfV2(x)==='未分类':categoryOfV2(x)===c)).sort((a,b)=>String(b.time).localeCompare(String(a.time))),box=document.getElementById('categoryDetails');if(!box)return;box.innerHTML='<b>'+escapeHtml(c)+' · '+rows.length+'笔</b>'+rows.map(x=>'<button type="button" data-category-bill-id="'+encodeURIComponent(x.id)+'" style="width:100%;text-align:left;background:white;border:0;border-bottom:1px solid var(--line);padding:11px 0"><b>'+escapeHtml(x.counterparty||x.product||'未填写交易对象')+'</b><small style="display:block;color:var(--muted);margin-top:4px">'+escapeHtml(x.time||'')+'</small><span style="display:flex;flex-wrap:wrap;gap:6px;margin-top:7px"><span style="display:inline-block;background:#edf4ff;color:#245fc7;border-radius:14px;padding:3px 9px;font-size:12px">'+escapeHtml(categoryOfV2(x))+'</span><span style="display:inline-block;background:#f2f4f7;color:#475467;border-radius:14px;padding:3px 9px;font-size:12px">'+escapeHtml(ownerOfV2(x))+'</span></span><span class="money" style="display:block;margin-top:7px">'+(direction==='支出'?'-':'+')+money(x.amount)+' · 点击修改分类 ›</span></button>').join('')||'<p class="muted">该分类下暂无账单。</p>'};
+window.setBillYearTag=function(year){const el=document.getElementById('billYear');if(!el)return;el.value=el.value===String(year)?'':String(year);renderBills();};
+window.setBillMonthTag=function(month){const el=document.getElementById('billMonth');if(!el)return;const value=String(month).padStart(2,'0');el.value=el.value===value?'':value;renderBills();};
 window.resetBillFilters=function(){const q=document.getElementById('billSearch'),y=document.getElementById('billYear'),m=document.getElementById('billMonth');if(q)q.value='';if(y)y.value='';if(m)m.value='';renderBills();};
 window.renderBills=function(){
  const list=document.getElementById('billList');if(!list)return;
@@ -579,8 +584,13 @@ window.renderBills=function(){
  const q=(document.getElementById('billSearch')?.value||'').trim().toLowerCase();
  const yearEl=document.getElementById('billYear'),monthEl=document.getElementById('billMonth');
  const years=[...new Set(b.map(x=>dateParts(x.time)?.year).filter(Boolean))].sort((a,z)=>z.localeCompare(a));
- const oldYear=yearEl?.value||'';
- if(yearEl){yearEl.innerHTML='<option value="">全部年份</option>'+years.map(y=>'<option value="'+y+'">'+y+'年</option>').join('');if(years.includes(oldYear))yearEl.value=oldYear;}
+ const oldYear=yearEl?.value||'',oldMonth=monthEl?.value||'';
+ if(yearEl){yearEl.innerHTML='<option value="">全部年份</option>'+years.map(y=>'<option value="'+y+'">'+y+'年</option>').join('');yearEl.value=years.includes(oldYear)?oldYear:'';}
+ if(monthEl)monthEl.value=oldMonth;
+ const tagStyle='border:1px solid var(--line);border-radius:18px;padding:7px 10px;font-size:13px;background:white;color:var(--text);';
+ const yearTags=document.getElementById('billYearTags'),monthTags=document.getElementById('billMonthTags');
+ if(yearTags)yearTags.innerHTML=years.map(y=>'<button type="button" onclick="setBillYearTag('+Number(y)+')" style="'+tagStyle+(yearEl?.value===y?'background:#eaf2ff;border-color:#3978f6;color:#245fc7;font-weight:700;':'')+'">'+y+'年</button>').join('')||'<span class="muted">暂无年份数据</span>';
+ if(monthTags)monthTags.innerHTML=Array.from({length:12},(_,i)=>{const mm=String(i+1).padStart(2,'0');return '<button type="button" onclick="setBillMonthTag('+(i+1)+')" style="'+tagStyle+(monthEl?.value===mm?'background:#eaf2ff;border-color:#3978f6;color:#245fc7;font-weight:700;':'')+'">'+(i+1)+'月</button>';}).join('');
  const y=yearEl?.value||'',mth=monthEl?.value||'';
  const base=b.filter(x=>{const d=dateParts(x.time),txt=[x.counterparty,x.product,x.remark,x.category,ownerOfV2(x)].join(' ').toLowerCase();return (!q||txt.includes(q))&&(!y||(d&&d.year===y))&&(!mth||(d&&d.month===mth));});
  window.billCategoryBaseRows=base;window.billFilteredRows=base;
