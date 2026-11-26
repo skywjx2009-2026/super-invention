@@ -419,6 +419,23 @@ window.addEventListener('DOMContentLoaded',function(){const cat=document.getElem
 const CATEGORY_SETTINGS_V3_KEY='expense_assistant_category_settings_v3';
 const GLOBAL_SUBCATEGORY_KEY='expense_assistant_global_subcategories_v1';
 const CATEGORY_USAGE_HISTORY_KEY='expense_assistant_category_usage_history_v1';
+/* 一级分类全局同步：兼容账单详情快速新增与「我的-分类设置」两套入口。 */
+(function(){
+ const saveLegacyCategoryConfig=saveCategoryConfig;
+ window.saveCategoryConfig=function(){
+  saveLegacyCategoryConfig();
+  try{
+   const key='expense_assistant_category_settings_v3';
+   let current={};try{current=JSON.parse(localStorage.getItem(key)||'{}')||{};}catch(e){}
+   current.expense=[...EXPENSE_CATEGORIES];
+   current.income=[...INCOME_CATEGORIES];
+   current.subcategories=getGlobalSubcategories();
+   localStorage.setItem(key,JSON.stringify(current));
+  }catch(e){console.warn('一级分类全局同步失败',e);}
+ };
+ saveCategoryConfig=window.saveCategoryConfig;
+})();
+
 function getGlobalSubcategories(){
  let saved=[];try{const v=JSON.parse(localStorage.getItem(GLOBAL_SUBCATEGORY_KEY)||'null');if(Array.isArray(v))saved=v;}catch(e){}
  if(!saved.length){let legacy=[];Object.values(SUBCATEGORIES||{}).forEach(a=>{if(Array.isArray(a))legacy.push(...a)});getSavedBills().forEach(x=>{if(x.subcategory)legacy.push(String(x.subcategory).trim())});(CATEGORY_RULES||[]).forEach(x=>{if(x.s)legacy.push(x.s)});saved=[...new Set(legacy.filter(Boolean))];}
