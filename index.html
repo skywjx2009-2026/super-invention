@@ -1125,4 +1125,64 @@ function restoreAppBackup(mergeBills){
 })();
 
 </script>
+
+<script>
+/* 单笔账单删除：详情页统一入口，覆盖手动记账与导入账单。 */
+(function(){
+ const previousOpenBillDetail=window.openBillDetail;
+ window.openBillDetail=function(encodedId){
+  if(typeof previousOpenBillDetail==='function')previousOpenBillDetail(encodedId);
+  const content=document.getElementById('billDetailContent');
+  if(!content)return;
+  const id=decodeURIComponent(encodedId);
+  const bill=getSavedBills().find(x=>String(x.id)===id);
+  if(!bill)return;
+  const oldButton=document.getElementById('deleteBillRecordV2');
+  if(oldButton)oldButton.remove();
+  const button=document.createElement('button');
+  button.type='button';
+  button.id='deleteBillRecordV2';
+  button.textContent='删除这笔记录';
+  button.style.cssText='display:block;width:100%;margin-top:18px;border:0;border-radius:10px;background:#fff0f0;color:#c62828;padding:14px;font-size:15px;font-weight:700;cursor:pointer';
+  button.addEventListener('click',function(){window.deleteBillRecordV2(encodeURIComponent(id));});
+  content.appendChild(button);
+ };
+ window.deleteBillRecordV2=function(encodedId){
+  const id=decodeURIComponent(encodedId);
+  const bills=getSavedBills();
+  const bill=bills.find(x=>String(x.id)===id);
+  if(!bill)return alert('未找到这笔账单，可能已被删除。');
+  const linkedRefunds=bills.filter(x=>x.direction==='收入'&&String(x.refundForId||'')===id);
+  if(bill.refundForId||linkedRefunds.length){
+   const message=bill.refundForId
+    ?'这笔记录已关联原始支出。请先在「冲销抵账明细」中解除关联，再删除。'
+    :'这笔支出已有 '+linkedRefunds.length+' 笔退款与其关联。请先在「冲销抵账明细」中逐笔解除关联，再删除。';
+   return alert(message);
+  }
+  const name=bill.counterparty||bill.product||'未填写交易对象';
+  const amount=money(bill.amount);
+  if(!confirm('确定删除这笔账单吗？\n\n'+(bill.direction||'收支')+' · '+name+' · '+amount+'\n\n删除后无法直接恢复，建议先备份数据。'))return;
+  const latest=getSavedBills();
+  const index=latest.findIndex(x=>String(x.id)===id);
+  if(index<0)return alert('账单已不存在，请刷新后重试。');
+  if(latest[index].refundForId||latest.some(x=>x.direction==='收入'&&String(x.refundForId||'')===id)){
+   return alert('删除前检测到退款关联状态发生变化。为保护数据，本次未删除，请重新打开详情检查。');
+  }
+  latest.splice(index,1);
+  localStorage.setItem(WECHAT_STORE_KEY,JSON.stringify(latest));
+  savedBillsCacheRaw=null;
+  getSavedBills();
+  if(typeof rememberCategoryUsage==='function')rememberCategoryUsage(latest);
+  const modal=document.getElementById('billDetailModal');
+  if(modal)modal.style.display='none';
+  activeBillId=null;
+  if(typeof renderBills==='function')renderBills();
+  if(typeof renderCategorySummary==='function')renderCategorySummary();
+  if(typeof renderHome==='function')renderHome();
+  if(typeof renderAnalysis==='function')renderAnalysis();
+  alert('这笔账单已删除，首页统计、分类统计及 BI 报表已刷新。');
+ };
+})();
+</script>
+
 </body></html>
