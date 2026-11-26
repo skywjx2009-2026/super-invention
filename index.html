@@ -783,6 +783,15 @@ function restoreAppBackup(mergeBills){
   const offsetAmount=offsets.reduce((n,x)=>n+Math.min(Number(x.amount||0),refundLinkedAmount(x.id)),0);
   const row=offsets.length?'<button type="button" data-open-offsets="home" style="width:100%;border:1px solid #fecaca;background:#fff5f5;color:#dc2626;text-align:left;padding:12px;margin-top:10px;border-radius:10px;display:flex;justify-content:space-between"><b>🔴 冲销抵账 · '+offsets.length+'笔</b><b>'+money(offsetAmount)+'　›</b></button>':'';
   const box=document.getElementById('homeCategories');if(box)box.innerHTML=(ordinary||'<p class="muted">暂无支出分类数据</p>')+row;
+  const incomePeriod=bills.filter(x=>{const d=dateParts(x.time);return d&&(!homeYear||Number(d.year)===Number(homeYear))&&(!m||Number(d.month)===Number(m))&&x.direction==='收入';});
+  const refundRows=incomePeriod.filter(x=>isOffsetIncome(x)&&x.refundForId);
+  const ordinaryIncome=incomePeriod.filter(x=>!isOffsetIncome(x));
+  const incomeSums={};ordinaryIncome.forEach(x=>{const c=categoryOfV2(x);incomeSums[c]=(incomeSums[c]||0)+effectiveIncomeAmount(x);});
+  const incomeEntries=Object.entries(incomeSums).sort((a,b)=>b[1]-a[1]),incomeTotal=incomeEntries.reduce((n,x)=>n+x[1],0);
+  const incomeHtml=incomeEntries.map(([c,v])=>'<div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--line)"><span>'+escapeHtml(c)+' · '+ordinaryIncome.filter(x=>categoryOfV2(x)===c).length+'笔</span><b>'+money(v)+'</b></div>').join('');
+  const refundTotal=refundRows.reduce((n,x)=>n+Number(x.amount||0),0);
+  const incomeOffsetRow=refundRows.length?'<button type="button" data-open-offsets="home-income" style="width:100%;border:1px solid #fecaca;background:#fff5f5;color:#dc2626;text-align:left;padding:12px;margin-top:10px;border-radius:10px;display:flex;justify-content:space-between"><b>🔴 冲销抵账 · '+refundRows.length+'笔</b><b>'+money(refundTotal)+'　›</b></button>':'';
+  const incomeBox=document.getElementById('homeIncomeCategories');if(incomeBox)incomeBox.innerHTML=(incomeHtml||'<p class="muted">暂无普通收入分类数据</p>')+incomeOffsetRow;
  };
  window.renderCategorySummary=function(){
   loadCategoryConfig();refreshCategoryNameEditors();
@@ -796,7 +805,10 @@ function restoreAppBackup(mergeBills){
    let html=rows.map(x=>'<button type="button" onclick="showCategoryDetails(\''+encodeURIComponent(x.c)+'\',\''+dir+'\')" style="width:100%;border:0;background:white;text-align:left;padding:11px 0;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:8px;font-size:13px"><span>'+escapeHtml(x.c)+'（'+x.n+'笔） · 查看明细 ›</span><b>'+money(x.sum)+'</b></button>').join('');
    if(dir==='支出'){
     const linked=b.filter(x=>x.direction==='支出'&&refundLinkedAmount(x.id)>0),amount=linked.reduce((n,x)=>n+Math.min(Number(x.amount||0),refundLinkedAmount(x.id)),0);
-    if(linked.length)html+='<button type="button" data-open-offsets="bills" style="width:100%;border:1px solid #fecaca;background:#fff5f5;color:#dc2626;text-align:left;padding:12px;margin-top:8px;border-radius:10px;display:flex;justify-content:space-between"><b>🔴 冲销抵账（'+linked.length+'笔）</b><b>'+money(amount)+'　查看 ›</b></button>';
+    if(linked.length)html+='<button type="button" data-open-offsets="bills-expense" style="width:100%;border:1px solid #fecaca;background:#fff5f5;color:#dc2626;text-align:left;padding:12px;margin-top:8px;border-radius:10px;display:flex;justify-content:space-between"><b>🔴 冲销抵账（'+linked.length+'笔支出）</b><b>'+money(amount)+'　查看 ›</b></button>';
+   }else{
+    const refunds=b.filter(x=>x.direction==='收入'&&isOffsetIncome(x)&&x.refundForId),amount=refunds.reduce((n,x)=>n+Number(x.amount||0),0);
+    if(refunds.length)html+='<button type="button" data-open-offsets="bills-income" style="width:100%;border:1px solid #fecaca;background:#fff5f5;color:#dc2626;text-align:left;padding:12px;margin-top:8px;border-radius:10px;display:flex;justify-content:space-between"><b>🔴 冲销抵账（'+refunds.length+'笔退款）</b><b>'+money(amount)+'　查看 ›</b></button>';
    }
    return html||'<p class="muted">暂无账单</p>';
   };
@@ -807,10 +819,11 @@ function restoreAppBackup(mergeBills){
  const oldAnalysis=window.renderAnalysis;
  window.renderAnalysis=function(){
   oldAnalysis();
-  const data=window.analysisFilteredBills||[],linked=data.filter(x=>x.direction==='支出'&&refundLinkedAmount(x.id)>0);
+  const data=window.analysisFilteredBills||[],linked=data.filter(x=>x.direction==='支出'&&refundLinkedAmount(x.id)>0),refunds=data.filter(x=>x.direction==='收入'&&isOffsetIncome(x)&&x.refundForId);
   const box=document.getElementById('biCategories');if(!box)return;
-  const amount=linked.reduce((n,x)=>n+Math.min(Number(x.amount||0),refundLinkedAmount(x.id)),0);
-  if(linked.length)box.insertAdjacentHTML('beforeend','<button type="button" data-open-offsets="analysis" style="width:100%;border:1px solid #fecaca;background:#fff5f5;color:#dc2626;text-align:left;padding:12px;margin-top:10px;border-radius:10px;display:flex;justify-content:space-between"><b>🔴 冲销抵账（'+linked.length+'笔）</b><b>'+money(amount)+'　查看 ›</b></button>');
+  const amount=linked.reduce((n,x)=>n+Math.min(Number(x.amount||0),refundLinkedAmount(x.id)),0),refundAmount=refunds.reduce((n,x)=>n+Number(x.amount||0),0);
+  if(linked.length)box.insertAdjacentHTML('beforeend','<button type="button" data-open-offsets="analysis-expense" style="width:100%;border:1px solid #fecaca;background:#fff5f5;color:#dc2626;text-align:left;padding:12px;margin-top:10px;border-radius:10px;display:flex;justify-content:space-between"><b>🔴 支出冲销抵账（'+linked.length+'笔）</b><b>'+money(amount)+'　查看 ›</b></button>');
+  if(refunds.length)box.insertAdjacentHTML('beforeend','<button type="button" data-open-offsets="analysis-income" style="width:100%;border:1px solid #fecaca;background:#fff5f5;color:#dc2626;text-align:left;padding:12px;margin-top:8px;border-radius:10px;display:flex;justify-content:space-between"><b>🔴 收入冲销抵账（'+refunds.length+'笔）</b><b>'+money(refundAmount)+'　查看 ›</b></button>');
  };
  window.openOffsetDetails=function(){
   const bills=getSavedBills(),expenses=bills.filter(x=>x.direction==='支出'&&refundLinkedAmount(x.id)>0).sort((a,b)=>String(b.time||'').localeCompare(String(a.time||'')));
