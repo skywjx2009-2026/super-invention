@@ -10,6 +10,54 @@
 .theme-action-button{background:var(--action-bg)!important;color:var(--action-text)!important;border:1px solid var(--action-border)!important;-webkit-text-fill-color:var(--action-text)!important;box-shadow:none}.theme-choice-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}.theme-choice{display:flex;flex-direction:column;align-items:flex-start;gap:5px;padding:10px;border:1px solid var(--line);border-radius:12px;background:var(--card);color:var(--text);text-align:left}.theme-choice.active{border:2px solid var(--blue);padding:9px;box-shadow:0 0 0 2px color-mix(in srgb,var(--blue) 12%,transparent)}.theme-choice small{font-size:11px;color:var(--muted)}.theme-preview{height:48px;width:100%;display:grid;place-items:center;border-radius:8px;font-size:20px}.theme-preview-light{background:linear-gradient(135deg,#f5f7fb,#fff)}.theme-preview-dark{background:linear-gradient(135deg,#172033,#303b52);color:white}.theme-preview-glass{background:linear-gradient(135deg,#a6c9ee,#e9dff8);backdrop-filter:blur(10px)}.theme-preview-custom{background:linear-gradient(135deg,#eaf3ff,#f1edff)}.theme-swatches{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-top:10px}.theme-swatches>button{width:32px;height:32px;border:1px solid #0002;border-radius:50%}.theme-color-picker{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--muted)}.theme-color-picker input{width:34px;height:32px;padding:0;border:0;background:none}
 body[data-theme="dark"]{--bg:#101522;--card:#1c2636;--text:#edf2fa;--muted:#a0aec0;--line:#344154;--blue:#79a8ff;--green:#58d49a;--red:#ff827c;--action-bg:#344154;--action-text:#edf2fa;--action-border:#506078}body[data-theme="dark"] .tabs{background:#172131ed}body[data-theme="dark"] .hero{background:linear-gradient(135deg,#315fae,#526fae)}body[data-theme="dark"] button{color:var(--text)}body[data-theme="dark"] .tag{background:#403a2e;color:#f5d18b}body[data-theme="dark"] .track{background:#344154}body[data-theme="dark"] .icon{background:#2a3850}body[data-theme="dark"] input,body[data-theme="dark"] select{background:#202c3e!important;color:var(--text)!important;border-color:var(--line)!important}body[data-theme="dark"] [style*="background:white"],body[data-theme="dark"] [style*="background: white"]{background:var(--card)!important}body[data-theme="dark"] [style*="background:#fff"],body[data-theme="dark"] [style*="background: #fff"]{background:var(--card)!important}
 body[data-theme="glass"]{--bg:#eaf0f8;--card:#ffffffa8;--text:#18263b;--muted:#66758b;--line:#ffffffb8;--blue:#477fc9;--green:#168b68;--red:#df625f;--action-bg:#e8eef7;--action-text:#18263b;--action-border:#ffffffb8;background:linear-gradient(145deg,#dcecff,#f2eafa 48%,#e2f3f0)}body[data-theme="glass"] .card,body[data-theme="glass"] .stat,body[data-theme="glass"] .tabs,body[data-theme="glass"] #systemSettingsModal>div{background:var(--card)!important;backdrop-filter:blur(22px) saturate(160%);-webkit-backdrop-filter:blur(22px) saturate(160%);border:1px solid #ffffffb8;box-shadow:0 8px 28px #536b8b18}body[data-theme="glass"] .hero{background:linear-gradient(135deg,#548ed0dd,#8e9fe5dd);backdrop-filter:blur(18px)}body[data-theme="glass"] button{backdrop-filter:blur(8px)}body[data-theme="custom"]{background-color:var(--bg);background-image:var(--custom-bg-image,none);background-size:cover;background-position:center;background-attachment:fixed}body[data-theme="custom"] .card,body[data-theme="custom"] .stat{background:color-mix(in srgb,var(--card) 92%,transparent)}
+
+/* Glass theme: unify translucent surfaces, controls, dividers and selected states */
+body[data-theme="glass"]{--card:rgba(255,255,255,.58);--line:rgba(91,116,150,.24);--muted:#64748b}
+body[data-theme="glass"] .app{background:transparent}
+body[data-theme="glass"] .card,
+body[data-theme="glass"] .stat,
+body[data-theme="glass"] .tabs,
+body[data-theme="glass"] #systemSettingsModal>div,
+body[data-theme="glass"] #categorySettingsModalV3>div,
+body[data-theme="glass"] #backupRestoreModal>div,
+body[data-theme="glass"] #importHistoryModal>div,
+body[data-theme="glass"] .modal>div{
+ background:rgba(255,255,255,.56)!important;
+ border:1px solid rgba(255,255,255,.78)!important;
+ backdrop-filter:blur(24px) saturate(175%);
+ -webkit-backdrop-filter:blur(24px) saturate(175%);
+ box-shadow:0 8px 28px rgba(66,88,120,.10)
+}
+body[data-theme="glass"] .card .card,
+body[data-theme="glass"] .card .stat{background:rgba(255,255,255,.38)!important}
+body[data-theme="glass"] #homeYearTags button,
+body[data-theme="glass"] #homeMonthTags button,
+body[data-theme="glass"] [data-bi-year-pick],
+body[data-theme="glass"] [data-bi-month-pick]{
+ background:rgba(255,255,255,.38)!important;
+ color:var(--text)!important;
+ border:1px solid rgba(255,255,255,.82)!important;
+ box-shadow:inset 0 1px 0 rgba(255,255,255,.5)
+}
+body[data-theme="glass"] #homeYearTags button[aria-pressed="true"],
+body[data-theme="glass"] #homeMonthTags button[aria-pressed="true"],
+body[data-theme="glass"] [data-bi-year-pick][aria-pressed="true"],
+body[data-theme="glass"] [data-bi-month-pick][aria-pressed="true"],
+body[data-theme="glass"] [data-bi-month][aria-pressed="true"]{
+ background:rgba(105,157,220,.24)!important;
+ border-color:rgba(78,132,198,.48)!important;
+ color:#245b91!important
+}
+body[data-theme="glass"] [data-bi-month]{border-bottom:1px solid var(--line)!important}
+body[data-theme="glass"] .tx{border-bottom-color:var(--line)}
+body[data-theme="glass"] .section{border-bottom:1px solid rgba(91,116,150,.16);padding-bottom:7px}
+body[data-theme="glass"] .track{background:rgba(105,125,155,.16)}
+body[data-theme="glass"] .icon{background:rgba(255,255,255,.42)}
+body[data-theme="glass"] input,
+body[data-theme="glass"] select,
+body[data-theme="glass"] textarea{background:rgba(255,255,255,.52)!important;color:var(--text)!important;border-color:rgba(91,116,150,.25)!important}
+body[data-theme="glass"] button{color:var(--text)}
+body[data-theme="glass"] .hero{border:1px solid rgba(255,255,255,.38);box-shadow:0 12px 30px rgba(76,112,160,.16)}
 </style></head>
 <body><main class="app">
 <header class="top"><h1>开支记账分析助手</h1><span class="tag">本机数据 · 原型版本</span></header>
