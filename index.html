@@ -664,4 +664,62 @@ function restoreAppBackup(mergeBills){
  window.renderAnalysis=function(){const owner=document.getElementById('biOwner');if(owner){const label=owner.closest('label');if(label)label.remove();else owner.remove();}oldAnalysis();cleanOwnerRows('biDetails');};
  document.addEventListener('DOMContentLoaded',function(){const owner=document.getElementById('biOwner');if(owner){const label=owner.closest('label');if(label)label.remove();else owner.remove();}});
 })();
-</script></body></html>
+</script>
+<script>
+/* 修复：确保最终生效的分类标签点击事件执行自动保存。 */
+(function(){
+ window.selectCategoryTagV2=function(button){
+  const value=button&&button.dataset?button.dataset.categoryTag:'';
+  const input=document.getElementById('detailCategorySelect');
+  if(!input||!activeBillId||!value)return;
+  const bills=getSavedBills(),bill=bills.find(x=>x.id===activeBillId);
+  if(!bill)return;
+  const oldCategory=categoryOfV2(bill);
+  input.value=value;
+  document.querySelectorAll('[data-category-tag]').forEach(b=>{
+   const active=b.dataset.categoryTag===value,red=b.dataset.categoryTag==='冲销抵账';
+   b.style.borderColor=active?(red?'#dc2626':'#3978f6'):(red?'#fecaca':'#e2e7ef');
+   b.style.background=active?(red?'#fef2f2':'#edf4ff'):(red?'#fff7f7':'#fff');
+   b.style.color=red?'#dc2626':active?'#245fc7':'#536078';
+   b.style.fontWeight=active?'700':'500';
+  });
+  if(bill.direction==='收入'&&value==='冲销抵账'){
+   const panel=document.getElementById('refundAssociationPanel');
+   if(panel){
+    const candidates=bills.filter(v=>v.direction==='支出'&&v.id!==bill.id&&Number(v.amount)>(refundLinkedAmount(v.id)-(bill.refundForId===v.id?Number(bill.amount||0):0))).sort((a,b)=>String(b.time||'').localeCompare(String(a.time||'')));
+    const options='<option value="">请选择需要冲抵的原始支出</option>'+candidates.map(v=>'<option value="'+escapeHtml(v.id)+'" '+(bill.refundForId===v.id?'selected':'')+'>'+escapeHtml(v.time||'')+'｜'+escapeHtml(v.counterparty||v.product||'未填写对象')+'｜金额 '+money(v.amount)+'｜剩余可冲抵 '+money(Math.max(0,Number(v.amount)-refundLinkedAmount(v.id)+(bill.refundForId===v.id?Number(bill.amount||0):0)))+'</option>').join('');
+    panel.style.display='block';panel.className='card';
+    panel.style.cssText='display:block;margin-top:14px;padding:12px;border:1px solid #fecaca;background:#fffafa';
+    panel.innerHTML='<b style="color:#dc2626">🔴 关联需要冲抵的支出</b><p class="muted" style="margin:6px 0 9px">请选择这笔退款对应的原始付款。退款不会计入收入，而是从对应支出中扣除。</p><select id="detailRefundTarget" style="width:100%;padding:11px;border:1px solid #f3b4b4;border-radius:9px;background:white">'+options+'</select><button type="button" onclick="saveDetailClassificationV2()" style="width:100%;margin-top:10px;border:0;border-radius:9px;background:#dc2626;color:white;padding:12px">确认冲销关联</button>';
+   }
+   return;
+  }
+  if(oldCategory===value)return;
+  if(bill.refundForId&&!confirm('当前账单已关联原始支出。改为其他分类后，将同时撤销退款关联。是否继续？')){
+   input.value=oldCategory;return;
+  }
+  const merchant=String(bill.counterparty||'').trim();
+  const matches=merchant?bills.filter(x=>x.id!==bill.id&&x.direction===bill.direction&&String(x.counterparty||'').trim()===merchant):[];
+  const applyAll=matches.length?confirm('发现 '+matches.length+' 笔交易对象同样为「'+merchant+'」的'+bill.direction+'账单。\n\n点击“确定”：将这些历史账单一并改为「'+value+'」。\n点击“取消”：只修改当前这一笔。'):false;
+  const latest=getSavedBills();
+  latest.forEach(x=>{
+   if(x.id===bill.id||(applyAll&&x.direction===bill.direction&&String(x.counterparty||'').trim()===merchant)){
+    x.category=value;
+    if(x.refundForId){delete x.refundForId;delete x.refundLinkStatus;}
+   }
+  });
+  localStorage.setItem(WECHAT_STORE_KEY,JSON.stringify(latest));
+  rememberCategoryUsage(latest);
+  renderBills();renderCategorySummary();renderHome();renderAnalysis();
+  const modal=document.getElementById('billDetailModal');if(modal)modal.style.display='none';
+  activeBillId=null;
+  if(applyAll)alert('已将「'+merchant+'」的 '+(matches.length+1)+' 笔历史账单统一归类为「'+value+'」。');
+ };
+ window.closeBillDetail=function(){
+  const modal=document.getElementById('billDetailModal');
+  if(modal)modal.style.display='none';
+  activeBillId=null;
+ };
+})();
+</script>
+</body></html>
