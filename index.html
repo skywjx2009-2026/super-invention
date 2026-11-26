@@ -393,7 +393,7 @@ function parseManualDescription(){
  document.getElementById('manualTime').value=localDateTimeValue(d);
  let payment='';if(/微信/.test(s))payment='微信支付';else if(/支付宝/.test(s))payment='支付宝';else if(/现金/.test(s))payment='现金';else if(/银行卡|银行转账|储蓄卡|信用卡/.test(s))payment='银行卡';
  document.getElementById('manualPayment').value=payment;
- let cleaned=s.replace(/(今天|昨天|前天|\d{1,2}月\d{1,2}日?|20\d{2}[-年/.]\d{1,2}[-月/.]\d{1,2})/g,' ').replace(/(?:人民币|金额|共计|一共|花了|支付了|收入|收到|到账)?\s*[￥¥]?\s*\d+(?:,\d{3})*(?:\.\d{1,2})?\s*(?:元|块钱|块)?/g,' ').replace(/(支出|收入|消费|付款|支付|买了|购买|花费|退款|报销|收款|工资|微信支付?|支付宝|现金|银行卡|银行转账|储蓄卡|信用卡|今天|昨天|前天)/g,' ').replace(/[，。,.、\s]+/g,' ').trim();
+ let cleaned=s.replace(/(今天|昨天|前天|\d{1,2}月\d{1,2}日?|20\d{2}[-年/.]\d{1,2}[-月/.]\d{1,2})/g,' ').replace(/(?:人民币|金额|共计|一共|花了|支付了|收入|收到|到账)?\s*[￥¥]?\s*\d+(?:,\d{3})*(?:\.\d{1,2})?\s*(?:元|块钱|块)?/g,' ').replace(/(支出|收入|消费|付款|支付|买了|购买|花费|退款|报销|收款|工资|微信支付?|支付宝|现金|银行卡|银行转账|储蓄卡|信用卡|今天|昨天|前天|早餐|午餐|晚餐|吃饭|咖啡|在)/g,' ').replace(/[，。,.、\s]+/g,' ').trim();
  if(cleaned&&cleaned.length<=40)document.getElementById('manualCounterparty').value=cleaned;
  if(/餐|午餐|晚餐|早餐|吃饭|咖啡/.test(s)&&direction==='支出'&&EXPENSE_CATEGORIES.includes('餐饮'))document.getElementById('manualCategory').value='餐饮';
  document.getElementById('manualParseHint').textContent='已根据描述初步识别。请核对并修正金额、日期、对象和分类后再保存；自动识别不保证完全准确。';
