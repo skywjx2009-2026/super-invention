@@ -159,7 +159,7 @@ function renderBills(){
 function escapeHtml(s){return s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 
 function money(v){return '¥'+Number(v||0).toLocaleString('zh-CN',{minimumFractionDigits:2,maximumFractionDigits:2})}
-function dateParts(t){const m=String(t||'').match(/^(\\d{4})[-/年](\\d{1,2})/);return m?{year:m[1],month:String(m[2]).padStart(2,'0'),key:m[1]+'-'+String(m[2]).padStart(2,'0')}:null}
+function dateParts(t){const m=String(t||'').trim().match(/^(\d{4})[-/年](\d{1,2})/);return m?{year:m[1],month:String(m[2]).padStart(2,'0'),key:m[1]+'-'+String(m[2]).padStart(2,'0')}:null}
 function resetAnalysisFilters(){['biYear','biMonth','biDirection','biCategory','biMin','biMax','biKeyword'].forEach(id=>{const e=document.getElementById(id);if(e)e.value=''});renderAnalysis()}
 function renderAnalysis(){
  const all=getSavedBills(),yearEl=document.getElementById('biYear'),catEl=document.getElementById('biCategory');
