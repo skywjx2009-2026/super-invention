@@ -171,7 +171,7 @@ function setAppTheme(theme){const t=theme==='dark'?'dark':'light';document.body.
 const pageScrollPositions=Object.create(null);
 function go(id,el){const target=document.getElementById(id);if(!target)return;const current=document.querySelector('.page.active');if(current)pageScrollPositions[current.id]=window.scrollY||window.pageYOffset||0;document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));target.classList.add('active');const tabs=document.querySelectorAll('.tabs button');tabs.forEach(x=>x.classList.remove('active'));if(el)el.classList.add('active');else{const i={home:0,bills:1,analysis:2,mine:3}[id];if(tabs[i])tabs[i].classList.add('active')}const restoreY=pageScrollPositions[id]||0;requestAnimationFrame(()=>{window.scrollTo(0,restoreY);requestAnimationFrame(()=>{if(id==='home')renderHome();else if(id==='bills')renderBills();else if(id==='analysis')renderAnalysis();});});}
 let m=new Date().getMonth()+1,homeYear=new Date().getFullYear();function changeHomePeriod(){}function setHomeCurrentMonth(){const now=new Date();homeYear=now.getFullYear();m=now.getMonth()+1;renderHome();}
-function refundLinkedAmount(expenseId){const bills=getSavedBills();return bills.filter(x=>x.direction==='收入'&&x.refundForId===expenseId).reduce((n,x)=>n+Number(x.amount||0),0);}
+function refundLinkedAmount(expenseId){return getRefundTotalsByExpenseId().get(String(expenseId))||0;}
 function refundRemaining(expense){return Math.max(0,Number(expense.amount||0)-refundLinkedAmount(expense.id));}
 function refundDateValue(x){return String(x.time||'').replace(/[^0-9]/g,'').slice(0,14);}
 function refundCandidates(refund){
@@ -214,7 +214,7 @@ function unlinkRefund(encodedRefundId){
 }
 
 
-function refundLinkedAmount(expenseId){return getSavedBills().filter(x=>x.direction==='收入'&&x.refundForId===expenseId).reduce((n,x)=>n+Number(x.amount||0),0);}
+function refundLinkedAmount(expenseId){return getRefundTotalsByExpenseId().get(String(expenseId))||0;}
 function refundRemaining(expenseIdOrBill){const e=typeof expenseIdOrBill==='object'?expenseIdOrBill:getSavedBills().find(x=>x.id===expenseIdOrBill);return e?Math.max(0,Number(e.amount||0)-refundLinkedAmount(e.id)):0;}
 function refundDateValue(x){return String(x.time||'').replace(/[^0-9]/g,'').slice(0,14);}
 function expenseNetAmount(x){return Math.max(0,Number(x.amount||0)-refundLinkedAmount(x.id));}
@@ -258,7 +258,26 @@ async function readBillFile(){
 }
 
 const WECHAT_STORE_KEY='expense_assistant_wechat_v1';
-function getSavedBills(){try{return JSON.parse(localStorage.getItem(WECHAT_STORE_KEY)||'[]')}catch(e){return []}}
+let savedBillsCacheRaw=null,savedBillsCache=[],refundTotalsByExpenseId=new Map();
+function getSavedBills(){
+ try{
+  const raw=localStorage.getItem(WECHAT_STORE_KEY)||'[]';
+  if(raw!==savedBillsCacheRaw){
+   const parsed=JSON.parse(raw);
+   savedBillsCache=Array.isArray(parsed)?parsed:[];
+   savedBillsCacheRaw=raw;
+   refundTotalsByExpenseId=new Map();
+   for(const bill of savedBillsCache){
+    if(bill&&bill.direction==='收入'&&bill.refundForId){
+     const id=String(bill.refundForId),amount=Number(bill.amount||0);
+     if(Number.isFinite(amount))refundTotalsByExpenseId.set(id,(refundTotalsByExpenseId.get(id)||0)+amount);
+    }
+   }
+  }
+  return savedBillsCache;
+ }catch(e){savedBillsCacheRaw=null;savedBillsCache=[];refundTotalsByExpenseId=new Map();return [];}
+}
+function getRefundTotalsByExpenseId(){getSavedBills();return refundTotalsByExpenseId;}
 function confirmImport(){
  const p=window.pendingWechatRows;if(!p){alert('请先读取账单文件。');return;}
  const idx={};p.headers.forEach((h,i)=>idx[String(h).trim()]=i);
