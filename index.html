@@ -17,7 +17,7 @@
 <div class="section"><h2>支出分类</h2><span>查看全部 ›</span></div><div class="card"><div class="cat"><div class="catrow"><span>餐饮</span><b>¥1,180.00 · 36%</b></div><div class="track"><div class="fill" style="width:36%"></div></div></div><div class="cat"><div class="catrow"><span>居家生活</span><b>¥820.00 · 25%</b></div><div class="track"><div class="fill" style="width:25%"></div></div></div><div class="cat"><div class="catrow"><span>交通出行</span><b>¥460.50 · 14%</b></div><div class="track"><div class="fill" style="width:14%"></div></div></div><div class="cat"><div class="catrow"><span>购物</span><b>¥390.00 · 12%</b></div><div class="track"><div class="fill" style="width:12%"></div></div></div></div>
 <div class="section"><h2>最近交易</h2><span onclick="go('bills')">全部账单 ›</span></div><div class="card"><div class="tx"><div class="icon">🍜</div><div class="txmain"><b>午餐 · 小馆</b><small>今天 12:18 · 餐饮</small></div><div class="money">-¥38.00</div></div><div class="tx"><div class="icon">🚕</div><div class="txmain"><b>网约车</b><small>今天 09:42 · 交通出行</small></div><div class="money">-¥26.50</div></div><div class="tx"><div class="icon">💰</div><div class="txmain"><b>工资收入</b><small>11月25日 · 工资</small></div><div class="money income">+¥12,800.00</div></div><div class="tx" style="border:0"><div class="icon">☕</div><div class="txmain"><b>咖啡</b><small>11月25日 · 餐饮</small></div><div class="money">-¥28.00</div></div></div>
 </section>
-<section id="bills" class="page"><div class="section"><h2>账单明细</h2><span>筛选 ⌄</span></div><div class="card"><input placeholder="搜索交易对象或备注" style="width:100%;padding:12px;border:1px solid var(--line);border-radius:10px"><p class="muted">全部　　支出　　收入　　按月份</p><div class="tx"><div class="icon">🍜</div><div class="txmain"><b>午餐 · 小馆</b><small>今天 12:18 · 餐饮</small></div><div class="money">-¥38.00</div></div><div class="tx"><div class="icon">🚕</div><div class="txmain"><b>网约车</b><small>今天 09:42 · 交通出行</small></div><div class="money">-¥26.50</div></div><div class="tx"><div class="icon">💰</div><div class="txmain"><b>工资收入</b><small>11月25日 · 工资</small></div><div class="money income">+¥12,800.00</div></div><div class="empty">当前仅展示演示账单。真实账单导入功能尚未接入。</div></div></section>
+<section id="bills" class="page"><div class="section"><h2>账单明细</h2><span>筛选 ⌄</span></div><div class="card"><input id="billSearch" placeholder="搜索交易对象、商品或备注" oninput="renderBills()" style="width:100%;padding:12px;border:1px solid var(--line);border-radius:10px"><p class="muted" id="billCount">本机已保存账单</p><div id="billList"><div class="empty">尚未导入真实账单。请前往「我的」导入微信账单。</div></div></div></section>
 <section id="cats" class="page"><div class="section"><h2>分类管理</h2><span>管理收支类别</span></div><div class="card"><h3>支出分类</h3><span class="pill">餐饮</span><span class="pill">交通出行</span><span class="pill">居家生活</span><span class="pill">购物</span><span class="pill">医疗健康</span><span class="pill">娱乐</span><span class="pill">教育</span><span class="pill">其他</span><hr style="border:0;border-top:1px solid var(--line)"><h3>收入分类</h3><span class="pill">工资</span><span class="pill">奖金</span><span class="pill">理财收入</span><span class="pill">其他收入</span><div class="empty">后续支持新增分类、二级分类、自动分类规则及人工调整。</div></div></section>
 <section id="analysis" class="page"><div class="section"><h2>BI 数据分析</h2><span>分析看板</span></div><div class="card"><div class="empty">选择年份、月份、收支类型、一级/二级分类、交易对象和金额区间，查看多维度收支分析。</div><div class="stats"><div class="stat"><small>总收入</small><b>¥12,800</b></div><div class="stat"><small>总支出</small><b>¥3,286</b></div><div class="stat"><small>结余</small><b>¥9,513</b></div></div><h3>计划分析内容</h3><p class="muted">分类占比 · 月度趋势 · 每日支出 · 同比/环比 · 支出 TOP10 · 账单明细下钻</p></div></section>
 <section id="mine" class="page"><div class="section"><h2>我的</h2><span>个人与数据设置</span></div><div class="card"><div class="tx"><div class="icon">📥</div><div class="txmain"><b>微信账单导入</b><small>在本机浏览器读取文件，不上传账单内容</small></div><span>›</span></div>
@@ -50,12 +50,46 @@ async function readBillFile(){
   if(!nonempty.length) throw new Error('文件中没有读取到有效内容。');
   const headerIndex=nonempty.findIndex(r=>r.filter(c=>String(c??'').trim()).length>=3);
   const headers=(nonempty[headerIndex]||[]).map((v,i)=>String(v||('列'+(i+1))).trim());
-  const sample=nonempty.slice(headerIndex+1,headerIndex+4);
+  const dataRows=nonempty.slice(headerIndex+1).filter(r=>r.some(v=>String(v??'').trim()!==''));
+  window.pendingWechatRows={headers,dataRows,fileName:file.name};
+  const sample=dataRows.slice(0,3);
   const keywords=['交易时间','交易类型','交易对方','商品','金额','收/支','支付方式','当前状态','备注'];
   const detected=keywords.map(k=>{const i=headers.findIndex(h=>h.includes(k));return i>=0?k+'：第'+(i+1)+'列（'+headers[i]+'）':null;}).filter(Boolean);
   box.innerHTML='<div style="background:#f5f8ff;border-radius:12px;padding:12px;margin-top:12px"><b style="font-size:13px">文件读取成功</b><p class="muted">文件名：'+escapeHtml(file.name)+'<br>有效行数（含表头）：'+nonempty.length+'<br>识别到的列数：'+headers.length+'</p><b style="font-size:13px">识别到的字段</b><p class="muted">'+(detected.length?detected.map(escapeHtml).join('<br>'):'暂未匹配常见微信账单字段，请检查下方表头。')+'</p><b style="font-size:13px">表头</b><p class="muted">'+headers.map(escapeHtml).join(' ｜ ')+'</p><b style="font-size:13px">前3行样例（仅显示在本机）</b><div style="overflow:auto"><table style="border-collapse:collapse;font-size:11px;white-space:nowrap">'+sample.map(row=>'<tr>'+row.map(v=>'<td style="border:1px solid #e3e8f1;padding:5px">'+escapeHtml(String(v))+'</td>').join('')+'</tr>').join('')+'</table></div></div>';
-  status.textContent='读取完成。当前仅做字段检查与预览，尚未写入账单数据库；文件内容未上传。';
+  box.insertAdjacentHTML('beforeend','<button onclick="confirmImport()" style="margin-top:12px;border:0;border-radius:10px;background:#16a36a;color:white;padding:12px;width:100%;font-size:14px">确认导入并保存在本机</button>');
+  status.textContent='读取完成。核对字段无误后，点击下方按钮导入；数据将保存在当前浏览器本机，不会上传。';
  }catch(e){status.textContent='读取失败：'+e.message;}
+}
+
+const WECHAT_STORE_KEY='expense_assistant_wechat_v1';
+function getSavedBills(){try{return JSON.parse(localStorage.getItem(WECHAT_STORE_KEY)||'[]')}catch(e){return []}}
+function confirmImport(){
+ const p=window.pendingWechatRows;if(!p){alert('请先读取账单文件。');return;}
+ const idx={};p.headers.forEach((h,i)=>idx[String(h).trim()]=i);
+ const val=(r,k)=>{const i=idx[k];return i===undefined?'':String(r[i]??'').trim()};
+ const existing=getSavedBills(), seen=new Set(existing.map(x=>x.id)), added=[];
+ p.dataRows.forEach((r,n)=>{
+  const time=val(r,'交易时间'), type=val(r,'交易类型'), counterparty=val(r,'交易对方'), product=val(r,'商品'), direction=val(r,'收/支'), rawAmount=val(r,'金额(元)'), payment=val(r,'支付方式'), status=val(r,'当前状态'), tradeNo=val(r,'交易单号'), merchantNo=val(r,'商户单号'), remark=val(r,'备注');
+  const amount=Number(rawAmount.replace(/[￥¥,\s]/g,''));
+  if(!time||!Number.isFinite(amount))return;
+  const id=tradeNo||merchantNo||[time,type,counterparty,product,rawAmount].join('|');
+  if(seen.has(id))return;seen.add(id);
+  added.push({id,time,type,counterparty,product,direction,amount,payment,status,tradeNo,merchantNo,remark,category:'未分类',source:p.fileName});
+ });
+ const merged=existing.concat(added);
+ try{localStorage.setItem(WECHAT_STORE_KEY,JSON.stringify(merged));}
+ catch(e){alert('本机存储空间不足，未能保存全部账单。请减少导入范围或先备份数据。');return;}
+ document.getElementById('importStatus').textContent='导入完成：新增 '+added.length+' 笔，重复跳过 '+(p.dataRows.length-added.length)+' 行。本机累计保存 '+merged.length+' 笔。';
+ document.getElementById('importPreview').insertAdjacentHTML('beforeend','<p class="muted">已保存到当前浏览器本机。换设备或清除浏览器数据可能导致数据无法继续访问，请后续使用备份功能。</p>');
+ renderBills();alert('导入完成，新增 '+added.length+' 笔账单。');
+}
+function renderBills(){
+ const list=document.getElementById('billList');if(!list)return;
+ const bills=getSavedBills().slice().sort((a,b)=>b.time.localeCompare(a.time));
+ const q=(document.getElementById('billSearch')?.value||'').trim().toLowerCase();
+ const filtered=bills.filter(x=>[x.counterparty,x.product,x.remark,x.category].join(' ').toLowerCase().includes(q));
+ document.getElementById('billCount').textContent='本机已保存 '+bills.length+' 笔 · 当前显示 '+filtered.length+' 笔';
+ list.innerHTML=filtered.slice(0,150).map(x=>'<div class="tx"><div class="icon">'+(x.direction==='收入'?'💰':x.direction==='支出'?'🧾':'↔️')+'</div><div class="txmain"><b>'+escapeHtml(x.counterparty||x.product||'未填写交易对象')+'</b><small>'+escapeHtml(x.time)+' · '+escapeHtml(x.category)+' · '+escapeHtml(x.status)+'</small></div><div class="money '+(x.direction==='收入'?'income':'')+'">'+(x.direction==='支出'?'-':x.direction==='收入'?'+':'')+'¥'+x.amount.toFixed(2)+'</div></div>').join('')||(bills.length?'<div class="empty">没有符合搜索条件的账单。</div>':'<div class="empty">尚未导入真实账单。请前往「我的」导入微信账单。</div>');
 }
 function escapeHtml(s){return s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 </script></body></html>
