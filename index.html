@@ -426,12 +426,27 @@ function saveManualEntry(){
  closeManualEntry();refreshAfterCategoryChange();alert('已保存这笔'+direction+'：'+money(amount));
 }
 
+function calendarDaysForPeriod(bills,year,month){
+ const valid=bills.map(x=>dateParts(x.time)).filter(Boolean);
+ if(year&&month)return new Date(Number(year),Number(month),0).getDate();
+ if(year)return (Number(year)%4===0&&(Number(year)%100!==0||Number(year)%400===0))?366:365;
+ if(month){
+  const years=[...new Set(valid.map(d=>Number(d.year)))];
+  return years.reduce((sum,y)=>sum+new Date(y,Number(month),0).getDate(),0);
+ }
+ if(!valid.length)return 1;
+ const keys=valid.map(d=>Number(d.year)*12+Number(d.month)-1);
+ const first=Math.min(...keys),last=Math.max(...keys);
+ let total=0;
+ for(let k=first;k<=last;k++){const y=Math.floor(k/12),m=k%12+1;total+=new Date(y,m,0).getDate();}
+ return total||1;
+}
 function renderHome(){
  const bills=getSavedBills(),now=new Date();
  if(!window.homeMonthInitialized){homeYear=now.getFullYear();m=now.getMonth()+1;window.homeMonthInitialized=true;}
  const data=bills.filter(x=>{const d=dateParts(x.time);return d&&(!homeYear||Number(d.year)===Number(homeYear))&&(!m||Number(d.month)===Number(m));});
  window.analysisFilteredBills=data;
- const income=data.filter(x=>x.direction==='收入'&&!isOffsetIncome(x)).reduce((a,x)=>a+effectiveIncomeAmount(x),0),expense=data.filter(x=>x.direction==='支出').reduce((a,x)=>a+expenseNetAmount(x),0),days=new Set(data.filter(x=>x.direction==='支出').map(x=>String(x.time||'').slice(0,10))).size;
+ const income=data.filter(x=>x.direction==='收入'&&!isOffsetIncome(x)).reduce((a,x)=>a+effectiveIncomeAmount(x),0),expense=data.filter(x=>x.direction==='支出').reduce((a,x)=>a+expenseNetAmount(x),0),days=calendarDaysForPeriod(bills,homeYear,m);
  const put=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v;};
  const availableYears=[...new Set(bills.map(x=>dateParts(x.time)?.year).filter(Boolean).map(Number))].sort((a,b)=>b-a);if(!availableYears.length)availableYears.push(now.getFullYear());const yearTags=document.getElementById('homeYearTags'),monthTags=document.getElementById('homeMonthTags');const tagStyle='flex:0 0 auto;border:1px solid var(--line);border-radius:18px;padding:7px 12px;font-size:13px;background:white;color:var(--text);';if(yearTags)yearTags.innerHTML=availableYears.map(y=>'<button type="button" data-home-year="'+y+'" aria-pressed="'+(y===homeYear?'true':'false')+'" style="'+tagStyle+(y===homeYear?'background:#eaf2ff;border-color:#3978f6;color:#245fc7;font-weight:700;':'')+'">'+y+'年</button>').join('');if(monthTags)monthTags.innerHTML=Array.from({length:12},(_,i)=>i+1).map(mm=>'<button type="button" data-home-month-pick="'+mm+'" aria-pressed="'+(mm===m?'true':'false')+'" style="'+tagStyle+(mm===m?'background:#eaf2ff;border-color:#3978f6;color:#245fc7;font-weight:700;':'')+'">'+mm+'月</button>').join('');const back=document.getElementById('homeBackToCurrent');if(back)back.style.display=(homeYear===now.getFullYear()&&m===now.getMonth()+1)?'none':'inline-block';const periodLabel=homeYear?(m?homeYear+'年'+m+'月':homeYear+'年全年'):(m?'所有年份 '+m+'月':'全部年份');put('homeExpenseLabel',periodLabel+'支出');put('homeIncomeLabel',periodLabel+'收入');put('homeExpenseCategoryLabel',periodLabel+'支出分类汇总 · 点击查看明细');put('homeIncomeCategoryLabel',periodLabel+'收入分类汇总 · 点击查看明细');put('expense',money(expense));put('homeIncome',money(income));put('homeBalance',money(income-expense));put('homeDaily',money(days?expense/days:0));put('homeCount',data.length+' 笔');put('homeMax',money(Math.max(0,...data.filter(x=>x.direction==='支出').map(x=>expenseNetAmount(x)))));
  put('homeRatio',income>0?'支出占收入 '+(expense/income*100).toFixed(1)+'%':(data.length?'该月暂无收入记录':'该月暂无账单'));
@@ -474,7 +489,7 @@ function renderAnalysis(){
  const min=document.getElementById('biMin').value,max=document.getElementById('biMax').value,kw=document.getElementById('biKeyword').value.trim().toLowerCase();
  const data=all.filter(x=>{const d=dateParts(x.time),txt=[x.counterparty,x.product,x.remark].join(' ').toLowerCase();return (!y||(d&&d.year===y))&&(!mo||(d&&d.month===mo))&&(!dir||x.direction===dir)&&(!cat||x.category===cat)&&(min===''||Number(x.amount)>=Number(min))&&(max===''||Number(x.amount)<=Number(max))&&(!kw||txt.includes(kw));});
  window.analysisFilteredBills=data;
- const income=data.filter(x=>x.direction==='收入'&&!isOffsetIncome(x)).reduce((a,x)=>a+effectiveIncomeAmount(x),0),expense=data.filter(x=>x.direction==='支出').reduce((a,x)=>a+expenseNetAmount(x),0),days=new Set(data.filter(x=>x.direction==='支出').map(x=>String(x.time||'').slice(0,10)).filter(Boolean)).size||1;
+ const income=data.filter(x=>x.direction==='收入'&&!isOffsetIncome(x)).reduce((a,x)=>a+effectiveIncomeAmount(x),0),expense=data.filter(x=>x.direction==='支出').reduce((a,x)=>a+expenseNetAmount(x),0),days=calendarDaysForPeriod(all,y,mo);
  const set=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v};
  set('biIncome',money(income));set('biExpense',money(expense));set('biBalance',money(income-expense));set('biDaily',money(expense/days));set('biCount',data.length);set('biMaxExpense',money(Math.max(0,...data.filter(x=>x.direction==='支出').map(x=>expenseNetAmount(x)))));
  const monthly={};data.forEach(x=>{const d=dateParts(x.time);if(!d)return;monthly[d.key]??={income:0,expense:0,incomeCount:0,expenseCount:0};if(x.direction==='收入'&&!isOffsetIncome(x)){monthly[d.key].income+=effectiveIncomeAmount(x);monthly[d.key].incomeCount++;}if(x.direction==='支出'){monthly[d.key].expense+=expenseNetAmount(x);monthly[d.key].expenseCount++;}});
