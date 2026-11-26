@@ -55,7 +55,10 @@
 <p class="muted" style="line-height:1.7">说明：报表仅统计当前浏览器本机保存的数据；未分类账单会列入总收支，但不会计入具体分类。退款、转账及异常状态的专项口径仍需后续完善，分析结果请结合账单明细核对。</p>
 </section>
 <section id="mine" class="page"><div class="section"><h2>我的</h2><span>个人与数据设置</span></div><div class="card"><button type="button" class="tx" onclick="openBillFilePicker()" style="width:100%;border:0;background:transparent;text-align:left;cursor:pointer;padding:14px 0"><div class="icon">📥</div><div class="txmain"><b style="font-size:16px">账单数据导入</b><small>导入微信支付账单、银行流水明细（Excel / CSV）</small></div><span style="font-size:22px;color:#3978f6">›</span></button>
-<input id="billFile" type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="readBillFile()"><div style="padding:0 0 16px"><p class="muted" id="importStatus" style="line-height:1.7">点击上方「账单数据导入」直接选择文件。文件仅在当前浏览器本地解析，不会上传到网站服务器。首次读取 Excel 需要联网加载解析组件。</p><div id="importPreview"></div></div><div class="tx"><div class="icon">🗂️</div><div class="txmain"><b>导入历史</b><small>查看文件导入记录</small></div><span>›</span></div><div class="tx"><div class="icon">🔄</div><div class="txmain"><b>备份与恢复</b><small>数据备份管理（待开发）</small></div><span>›</span></div><button type="button" onclick="openRefundOffsetManager()" class="tx" style="width:100%;border:0;border-top:1px solid var(--line);background:white;text-align:left;padding:12px 0"><div class="icon">🔴</div><div class="txmain"><b>冲销抵账管理</b><small>查看已关联退款，修改关联或解除关联</small></div><span>›</span></button><button type="button" onclick="openCategorySettingsV3()" class="tx" style="width:100%;border:0;border-top:1px solid var(--line);background:white;text-align:left;padding:12px 0"><div class="icon">🏷️</div><div class="txmain"><b>分类设置</b><small>管理支出分类、收入分类和二级分类</small></div><span>›</span></button><button type="button" onclick="openSystemSettings()" class="tx" style="width:100%;border:0;border-top:1px solid var(--line);background:white;text-align:left;padding:12px 0"><div class="icon">⚙️</div><div class="txmain"><b>系统设置</b><small>外观主题、页面显示等通用设置</small></div><span>›</span></button></div><p class="muted" style="text-align:center;margin-top:22px">开支记账分析助手 · 原型版本 0.1</p></section>
+<input id="billFile" type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="readBillFile()"><div style="padding:0 0 16px"><p class="muted" id="importStatus" style="line-height:1.7">点击上方「账单数据导入」直接选择文件。文件仅在当前浏览器本地解析，不会上传到网站服务器。首次读取 Excel 需要联网加载解析组件。</p><div id="importPreview"></div></div><button type="button" class="tx" onclick="openImportHistory()" style="width:100%;border:0;background:white;text-align:left;padding:12px 0"><div class="icon">🗂️</div><div class="txmain"><b>导入历史</b><small>查看每次导入的文件、笔数和时间</small></div><span>›</span></button><button type="button" class="tx" onclick="openBackupRestore()" style="width:100%;border:0;border-top:1px solid var(--line);background:white;text-align:left;padding:12px 0"><div class="icon">🔄</div><div class="txmain"><b>备份与恢复</b><small>导出本机数据备份，或从备份文件恢复</small></div><span>›</span></button><button type="button" onclick="openRefundOffsetManager()" class="tx" style="width:100%;border:0;border-top:1px solid var(--line);background:white;text-align:left;padding:12px 0"><div class="icon">🔴</div><div class="txmain"><b>冲销抵账管理</b><small>查看已关联退款，修改关联或解除关联</small></div><span>›</span></button><button type="button" onclick="openCategorySettingsV3()" class="tx" style="width:100%;border:0;border-top:1px solid var(--line);background:white;text-align:left;padding:12px 0"><div class="icon">🏷️</div><div class="txmain"><b>分类设置</b><small>管理支出分类、收入分类和二级分类</small></div><span>›</span></button><button type="button" onclick="openSystemSettings()" class="tx" style="width:100%;border:0;border-top:1px solid var(--line);background:white;text-align:left;padding:12px 0"><div class="icon">⚙️</div><div class="txmain"><b>系统设置</b><small>外观主题、页面显示等通用设置</small></div><span>›</span></button></div><p class="muted" style="text-align:center;margin-top:22px">开支记账分析助手 · 原型版本 0.1</p></section>
+
+<div id="importHistoryModal" style="display:none;position:fixed;inset:0;background:#0008;z-index:120;align-items:center;justify-content:center;padding:16px" onclick="if(event.target===this)closeDataModal('importHistoryModal')"><div style="background:white;border-radius:18px;width:min(100%,520px);max-height:85vh;overflow:auto;padding:18px"><div style="display:flex;justify-content:space-between;align-items:center"><h2 style="margin:0;font-size:18px">导入历史</h2><button onclick="closeDataModal('importHistoryModal')" style="border:0;background:#f1f3f7;border-radius:8px;padding:7px 11px">关闭</button></div><p class="muted" style="line-height:1.6">这里只记录导入操作摘要，不保存原始账单文件。重新导入同一份账单时，重复交易会按交易单号去重。</p><div id="importHistoryList"></div></div></div>
+<div id="backupRestoreModal" style="display:none;position:fixed;inset:0;background:#0008;z-index:121;align-items:center;justify-content:center;padding:16px" onclick="if(event.target===this)closeDataModal('backupRestoreModal')"><div style="background:white;border-radius:18px;width:min(100%,520px);max-height:88vh;overflow:auto;padding:18px"><div style="display:flex;justify-content:space-between;align-items:center"><h2 style="margin:0;font-size:18px">备份与恢复</h2><button onclick="closeDataModal('backupRestoreModal')" style="border:0;background:#f1f3f7;border-radius:8px;padding:7px 11px">关闭</button></div><div class="card" style="margin-top:14px;background:#f7f9fc"><b>本机数据概况</b><p id="backupDataSummary" class="muted" style="line-height:1.7;margin-bottom:0"></p></div><h3 style="font-size:15px;margin:18px 0 8px">一、创建备份</h3><p class="muted" style="line-height:1.6">将账单、分类配置、二级分类、商户规则、退款关联及导入历史等本应用数据导出为 JSON 文件，保存到手机或云端文件夹。</p><button type="button" onclick="downloadAppBackup()" style="width:100%;border:0;border-radius:10px;background:#3978f6;color:white;padding:13px;font-size:14px">下载完整备份文件</button><h3 style="font-size:15px;margin:20px 0 8px">二、从备份恢复</h3><p class="muted" style="line-height:1.6">选择本应用生成的 JSON 备份文件。可选择完整覆盖恢复，或仅补入备份中尚不存在的账单。恢复前建议先下载当前数据备份。</p><input id="restoreBackupFile" type="file" accept=".json,application/json" style="display:none" onchange="readBackupFile(event)"><button type="button" onclick="document.getElementById('restoreBackupFile').click()" style="width:100%;border:1px solid #3978f6;border-radius:10px;background:white;color:#245fc7;padding:12px;font-size:14px">选择备份文件</button><div id="restoreBackupPreview" style="margin-top:12px"></div><p class="muted" style="line-height:1.6;margin:16px 0 0">重要：数据目前保存在当前浏览器本机。备份文件需要由你自行保存；卸载浏览器、清除网站数据或更换设备前，请先备份。此功能不会把数据上传到服务器。</p></div></div>
 <div id="systemSettingsModal" style="display:none;position:fixed;inset:0;background:#10182888;z-index:31;align-items:flex-end;justify-content:center;padding:12px" onclick="if(event.target===this)closeSystemSettings()"><div style="width:min(560px,100%);max-height:88vh;overflow:auto;background:white;border-radius:20px;padding:18px 15px calc(20px + env(safe-area-inset-bottom))"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px"><div><b style="font-size:18px">系统设置</b><div class="muted" style="margin-top:4px">管理应用的通用显示与使用偏好</div></div><button onclick="closeSystemSettings()" style="border:0;background:#f1f3f7;border-radius:20px;padding:8px 13px">完成</button></div><section class="card" style="padding:14px"><b>外观主题</b><p class="muted" style="line-height:1.7;margin-bottom:0">后续将在这里提供亮色模式、暗色模式及自定义背景颜色设置。目前主题切换功能尚未开放。</p></section></div></div><div id="categorySettingsModalV3" style="display:none;position:fixed;inset:0;background:#10182888;z-index:30;align-items:flex-end;justify-content:center;padding:16px" onclick="if(event.target===this)closeCategorySettingsV3()"><div style="width:min(560px,100%);max-height:85%;overflow:auto;background:white;border-radius:20px;padding:18px 16px calc(18px + env(safe-area-inset-bottom))"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px"><div><b style="font-size:18px">分类管理</b><div class="muted" style="margin-top:4px">自定义一级分类、二级分类及显示顺序</div></div><button onclick="closeCategorySettingsV3()" style="border:0;background:#f1f3f7;border-radius:20px;padding:8px 13px">完成</button></div><div id="categorySettingsContentV3"></div></div></div><div id="homeCategoryModal" style="display:none;position:fixed;inset:0;background:#10182888;z-index:19;align-items:flex-end;justify-content:center;padding:16px" onclick="if(event.target===this)closeHomeCategory()"><div style="width:min(560px,100%);max-height:85%;overflow:auto;background:white;border-radius:20px;padding:18px 16px calc(18px + env(safe-area-inset-bottom))"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px"><b id="homeCategoryTitle" style="font-size:18px">分类账单</b><button onclick="closeHomeCategory()" style="border:0;background:#f1f3f7;border-radius:20px;padding:8px 12px">关闭</button></div><div id="homeCategoryRows"></div></div></div><div id="billDetailModal" style="display:none;position:fixed;inset:0;background:#10182888;z-index:20;align-items:flex-end;justify-content:center;padding:16px" onclick="if(event.target===this)closeBillDetail()"><div style="width:min(560px,100%);max-height:85%;overflow:auto;background:white;border-radius:20px;padding:18px 16px calc(18px + env(safe-area-inset-bottom))"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px"><b style="font-size:18px">账单详情</b><button onclick="closeBillDetail()" style="border:0;background:#f1f3f7;border-radius:20px;padding:8px 12px">关闭</button></div><div id="billDetailContent"></div></div></div>iv></main><nav class="tabs"><button class="active" onclick="go('home',this)"><strong>⌂</strong>首页</button><button onclick="go('bills',this)"><strong>▤</strong>账单分类</button><button onclick="go('analysis',this)"><strong>▥</strong>分析</button><button onclick="go('mine',this)"><strong>♙</strong>我的</button></nav>
 <script>
 function go(id,el){document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));document.getElementById(id).classList.add('active');document.querySelectorAll('.tabs button').forEach(x=>x.classList.remove('active'));if(el)el.classList.add('active');else{const i={home:0,bills:1,analysis:2,mine:3}[id];document.querySelectorAll('.tabs button')[i].classList.add('active')}if(id==='home')renderHome();if(id==='bills'){renderBills();renderCategorySummary();}if(id==='analysis')renderAnalysis();window.scrollTo(0,0)}
@@ -166,7 +169,9 @@ function confirmImport(){
  catch(e){alert('本机存储空间不足，未能保存全部账单。请减少导入范围或先备份数据。');return;}
  renderHome();document.getElementById('importStatus').textContent='导入完成：新增 '+added.length+' 笔，重复跳过 '+(p.dataRows.length-added.length)+' 行。本机累计保存 '+merged.length+' 笔。';
  document.getElementById('importPreview').insertAdjacentHTML('beforeend','<p class="muted">已保存到当前浏览器本机。换设备或清除浏览器数据可能导致数据无法继续访问，请后续使用备份功能。</p>');
- renderBills();alert('导入完成，新增 '+added.length+' 笔账单。');
+ renderBills();
+ try{const history=readImportHistory();history.push({importedAt:new Date().toLocaleString('zh-CN',{hour12:false}),fileName:p.fileName||'未命名文件',sourceRows:p.dataRows.length,added:added.length,skipped:p.dataRows.length-added.length,totalAfter:merged.length});saveImportHistory(history);}catch(e){console.warn('导入历史记录保存失败',e);}
+ alert('导入完成，新增 '+added.length+' 笔账单。');
 }
 const EXPENSE_CATEGORIES=['餐饮','交通出行','居家生活','购物','医疗健康','娱乐','教育','通讯数码','人情往来','其他'];
 const INCOME_CATEGORIES=['工资','奖金','理财收入','退款/报销','其他收入'];
@@ -538,4 +543,77 @@ window.renderBills=function(){
   return '<button type="button" data-bill-detail-id="'+encodeURIComponent(x.id)+'" onclick="openBillDetail(decodeURIComponent(this.dataset.billDetailId))" style="width:100%;text-align:left;background:white;border:0;border-bottom:1px solid var(--line);padding:12px 0;display:flex;align-items:center;gap:10px"><span class="icon">'+(x.direction==='收入'?'💰':'🧾')+'</span><span class="txmain" style="min-width:0"><b>'+escapeHtml(x.counterparty||x.product||'未填写交易对象')+'</b><small>'+escapeHtml(x.time||'')+' · '+(un?'<span class="pending-badge">未分类</span>':escapeHtml(categoryOfV2(x)))+' · '+(op?'<span class="owner-pending">未指定归属</span>':escapeHtml(ownerOfV2(x)))+'</small></span><span style="text-align:right;white-space:nowrap"><b class="money '+(x.direction==='收入'?'income':'')+'">'+(x.direction==='支出'?'-':'+')+money(x.amount)+'</b><small style="display:block;color:var(--muted);margin-top:4px">查看详情 ›</small></span></button>';
  }).join('')||(b.length?'<div class="empty">没有符合当前筛选条件的账单。</div>':'<div class="empty">尚未导入真实账单。请前往「我的」导入微信账单。</div>');
 };
+
+const IMPORT_HISTORY_KEY='expense_assistant_import_history_v1';
+const APP_BACKUP_ID='expense-assistant-local-backup';
+function readImportHistory(){try{const v=JSON.parse(localStorage.getItem(IMPORT_HISTORY_KEY)||'[]');return Array.isArray(v)?v:[];}catch(e){return [];}}
+function saveImportHistory(rows){localStorage.setItem(IMPORT_HISTORY_KEY,JSON.stringify(rows.slice(0,300)));}
+function openImportHistory(){
+ const rows=readImportHistory().slice().sort((a,b)=>String(b.importedAt).localeCompare(String(a.importedAt)));
+ const box=document.getElementById('importHistoryList');if(!box)return;
+ box.innerHTML=rows.length?rows.map(x=>'<div style="padding:12px 0;border-bottom:1px solid var(--line)"><b style="display:block;overflow-wrap:anywhere">'+escapeHtml(x.fileName||'未命名文件')+'</b><small class="muted">'+escapeHtml(x.importedAt||'')+'</small><div style="font-size:13px;line-height:1.8;margin-top:5px">文件有效数据行：'+Number(x.sourceRows||0)+' 笔<br>新增导入：<b>'+Number(x.added||0)+' 笔</b> · 重复跳过：'+Number(x.skipped||0)+' 笔<br>导入后本机账单累计：'+Number(x.totalAfter||0)+' 笔</div></div>').join(''):'<div class="empty">暂无导入记录。成功导入账单后，这里会自动记录文件名、导入时间和新增/重复笔数。</div>';
+ const modal=document.getElementById('importHistoryModal');modal.style.display='flex';
+}
+function closeDataModal(id){const e=document.getElementById(id);if(e)e.style.display='none';}
+function appBackupData(){
+ const data={};for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&k.indexOf('expense_assistant_')===0)data[k]=localStorage.getItem(k);}
+ return data;
+}
+function openBackupRestore(){
+ const bills=getSavedBills(),data=appBackupData(),box=document.getElementById('backupDataSummary');
+ if(box)box.textContent='当前账单：'+bills.length+' 笔；应用数据项：'+Object.keys(data).length+' 项；导入历史：'+readImportHistory().length+' 次。';
+ const p=document.getElementById('restoreBackupPreview');if(p)p.innerHTML='';
+ const f=document.getElementById('restoreBackupFile');if(f)f.value='';
+ document.getElementById('backupRestoreModal').style.display='flex';
+}
+function downloadAppBackup(){
+ const data=appBackupData(),payload={appId:APP_BACKUP_ID,schemaVersion:1,createdAt:new Date().toISOString(),billCount:getSavedBills().length,data};
+ const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a'),stamp=new Date().toISOString().replace(/[:.]/g,'-');
+ a.href=url;a.download='开支记账助手备份_'+stamp+'.json';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1500);
+}
+window.pendingRestoreBackup=null;
+function readBackupFile(event){
+ const file=event.target.files&&event.target.files[0];if(!file)return;
+ const box=document.getElementById('restoreBackupPreview');box.innerHTML='<p class="muted">正在读取备份文件……</p>';
+ const reader=new FileReader();
+ reader.onload=()=>{
+  try{
+   const p=JSON.parse(String(reader.result||''));
+   if(!p||p.appId!==APP_BACKUP_ID||p.schemaVersion!==1||!p.data||typeof p.data!=='object'||Array.isArray(p.data))throw new Error('文件格式不正确，或不是本应用生成的备份文件。');
+   const billsRaw=p.data[WECHAT_STORE_KEY],backupBills=billsRaw?JSON.parse(billsRaw):[];
+   if(!Array.isArray(backupBills))throw new Error('备份中的账单数据格式异常。');
+   for(const k of Object.keys(p.data)){if(k.indexOf('expense_assistant_')!==0||typeof p.data[k]!=='string')throw new Error('备份包含不支持的数据项，已停止恢复。');JSON.parse(p.data[k]);}
+   window.pendingRestoreBackup={payload:p,fileName:file.name};
+   box.innerHTML='<div style="background:#f5f8ff;border-radius:11px;padding:12px"><b>备份文件校验通过</b><p class="muted" style="line-height:1.7;margin:7px 0 0">文件：'+escapeHtml(file.name)+'<br>备份时间：'+escapeHtml(p.createdAt||'未知')+'<br>备份账单：'+backupBills.length+' 笔<br>数据项：'+Object.keys(p.data).length+' 项</p></div><button type="button" onclick="restoreAppBackup(false)" style="width:100%;margin-top:10px;border:0;border-radius:10px;background:#d92d20;color:white;padding:12px">完整覆盖恢复（替换本机应用数据）</button><button type="button" onclick="restoreAppBackup(true)" style="width:100%;margin-top:9px;border:1px solid #3978f6;border-radius:10px;background:white;color:#245fc7;padding:12px">合并账单（只补入备份中不存在的交易）</button><small class="muted" style="display:block;line-height:1.6;margin-top:9px">合并模式保留本机已有账单；备份中的分类配置、规则等设置会恢复为备份版本，以保证备份账单所需配置可用。</small>';
+  }catch(e){window.pendingRestoreBackup=null;box.innerHTML='<p style="color:#b42318">读取失败：'+escapeHtml(e.message)+'</p>';}
+ };
+ reader.onerror=()=>{box.innerHTML='<p style="color:#b42318">无法读取所选文件。</p>';};reader.readAsText(file);
+}
+function restoreAppBackup(mergeBills){
+ const pending=window.pendingRestoreBackup;if(!pending)return alert('请先选择并校验备份文件。');
+ const backup=pending.payload.data,current=appBackupData();
+ const backupBills=JSON.parse(backup[WECHAT_STORE_KEY]||'[]'),currentBills=getSavedBills();
+ let next={...backup};
+ if(mergeBills){
+  const ids=new Set(currentBills.map(x=>String(x.id))),merged=currentBills.concat(backupBills.filter(x=>!ids.has(String(x.id))));
+  next[WECHAT_STORE_KEY]=JSON.stringify(merged);
+  const oldHistory=readImportHistory(),backHistory=Array.isArray(JSON.parse(backup[IMPORT_HISTORY_KEY]||'[]'))?JSON.parse(backup[IMPORT_HISTORY_KEY]||'[]'):[];
+  const historyMap=new Map();oldHistory.concat(backHistory).forEach(x=>historyMap.set(String(x.importedAt)+'|'+String(x.fileName),x));
+  next[IMPORT_HISTORY_KEY]=JSON.stringify([...historyMap.values()].slice(-300));
+ }
+ const mode=mergeBills?'合并账单':'完整覆盖恢复';
+ if(!confirm('即将执行「'+mode+'」。'+(mergeBills?'本机已有账单会保留，重复交易不会重复添加；应用分类配置和规则将恢复为备份版本。':'本机当前所有 expense_assistant_ 开头的数据将被备份文件替换。')+'\n\n建议确认你已经保存当前数据备份。是否继续？'))return;
+ const snapshot={};for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&k.indexOf('expense_assistant_')===0)snapshot[k]=localStorage.getItem(k);}
+ try{
+  Object.keys(snapshot).forEach(k=>localStorage.removeItem(k));
+  Object.keys(next).forEach(k=>{if(k.indexOf('expense_assistant_')===0)localStorage.setItem(k,next[k]);});
+ }catch(e){
+  for(let i=localStorage.length-1;i>=0;i--){const k=localStorage.key(i);if(k&&k.indexOf('expense_assistant_')===0)localStorage.removeItem(k);}
+  Object.keys(snapshot).forEach(k=>localStorage.setItem(k,snapshot[k]));
+  alert('恢复失败：本机存储空间可能不足。已尝试恢复操作前的数据。错误：'+e.message);return;
+ }
+ window.pendingRestoreBackup=null;closeDataModal('backupRestoreModal');
+ loadCategoryConfig();renderBills();renderCategorySummary();renderHome();renderAnalysis();
+ alert('恢复完成。当前账单 '+getSavedBills().length+' 笔。建议检查分类、退款关联及 BI 统计。');
+}
 </script></body></html>
