@@ -105,6 +105,10 @@ body[data-theme="dark"] .page strong{color:inherit}
 body[data-theme="dark"] .page .muted,
 body[data-theme="dark"] .page small{color:#b8c4d3}
 
+/* 暗色模式：账单详情中的已选一级分类必须有明确的高对比状态 */
+body[data-theme="dark"] #billDetailContent [data-category-tag]{background:#263449!important;color:#d5deeb!important;border:1px solid #586b84!important;}
+body[data-theme="dark"] #billDetailContent [data-category-tag][aria-pressed="true"]{background:#1d4ed8!important;color:#ffffff!important;border:2px solid #93c5fd!important;box-shadow:0 0 0 2px #60a5fa55,0 2px 8px #0006!important;font-weight:800!important;}
+body[data-theme="dark"] #billDetailContent [data-category-tag="冲销抵账"][aria-pressed="true"]{background:#991b1b!important;color:#ffffff!important;border:2px solid #fca5a5!important;box-shadow:0 0 0 2px #ef444455,0 2px 8px #0006!important;}
 </style></head>
 <body><main class="app">
 <header class="top"><h1>开支记账分析助手</h1><div class="appearance-switch" role="group" aria-label="页面外观"><button type="button" id="themeLightBtn" class="active" onclick="setAppTheme('light')">☀️ 亮色</button><button type="button" id="themeDarkBtn" onclick="setAppTheme('dark')">🌙 暗色</button></div></header>
@@ -453,7 +457,7 @@ window.selectCategoryTagV2=function(button){
  const value=button.dataset.categoryTag,input=document.getElementById('detailCategorySelect');if(!input)return;
  const id=activeBillId,bills=getSavedBills(),bill=bills.find(x=>x.id===id);if(!bill)return;
  input.value=value;
- document.querySelectorAll('[data-category-tag]').forEach(b=>{const active=b.dataset.categoryTag===value;b.style.borderColor=active?'#3978f6':'#e2e7ef';b.style.background=active?'#edf4ff':'#fff';b.style.color=active?'#245fc7':'#536078';b.style.fontWeight=active?'700':'500';});
+ document.querySelectorAll('[data-category-tag]').forEach(b=>{const active=b.dataset.categoryTag===value;b.setAttribute('aria-pressed',active?'true':'false');b.style.borderColor=active?'#3978f6':'#e2e7ef';b.style.background=active?'#edf4ff':'#fff';b.style.color=active?'#245fc7':'#536078';b.style.fontWeight=active?'700':'500';});
  // 冲销抵账必须先选择原始支出，保留详情窗口供用户完成关联。
  if(bill.direction==='收入'&&value==='冲销抵账'){
   const panel=document.getElementById('refundAssociationPanel');
