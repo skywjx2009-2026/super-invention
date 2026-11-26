@@ -25,7 +25,50 @@ body[data-theme="dark"] [id$="Modal"] button{color:inherit}
 body[data-theme="dark"] [id$="Modal"] .card{background:#263244!important}
 body[data-theme="dark"] .pill{background:#263d60;color:#a9c8ff}
 body[data-theme="dark"] .section span,body[data-theme="dark"] .muted{color:#aab4c3}
-@media(max-width:380px){.top{gap:8px}.top h1{font-size:18px}.appearance-switch button{padding:7px 8px;font-size:11px}}</style></head>
+@media(max-width:380px){.top{gap:8px}.top h1{font-size:18px}.appearance-switch button{padding:7px 8px;font-size:11px}}
+/* 暗色模式可读性补强：覆盖页面内联浅色背景与固定灰色文字 */
+body[data-theme="dark"] .page [style*="background:white"],
+body[data-theme="dark"] .page [style*="background: white"],
+body[data-theme="dark"] .page [style*="background:#fff"],
+body[data-theme="dark"] .page [style*="background: #fff"],
+body[data-theme="dark"] [id$="Modal"] [style*="background:white"],
+body[data-theme="dark"] [id$="Modal"] [style*="background: white"],
+body[data-theme="dark"] [id$="Modal"] [style*="background:#fff"],
+body[data-theme="dark"] [id$="Modal"] [style*="background: #fff"]{background:#263244!important;color:#f3f4f6!important}
+body[data-theme="dark"] .page [style*="color:#667085"],
+body[data-theme="dark"] .page [style*="color: #667085"],
+body[data-theme="dark"] .page [style*="color:#657084"],
+body[data-theme="dark"] .page [style*="color: #657084"],
+body[data-theme="dark"] .page [style*="color:#536078"],
+body[data-theme="dark"] .page [style*="color: #536078"],
+body[data-theme="dark"] .page [style*="color:#8993a3"],
+body[data-theme="dark"] .page [style*="color: #8993a3"],
+body[data-theme="dark"] .page [style*="color:#98a1b0"],
+body[data-theme="dark"] .page [style*="color: #98a1b0"],
+body[data-theme="dark"] .page [style*="color:#8993a4"],
+body[data-theme="dark"] .page [style*="color: #8993a4"]{color:#b8c3d2!important}
+body[data-theme="dark"] .page button,
+body[data-theme="dark"] [id$="Modal"] button{color:inherit}
+body[data-theme="dark"] .page button[style*="background:white"],
+body[data-theme="dark"] .page button[style*="background: white"],
+body[data-theme="dark"] .page button[style*="background:#fff"],
+body[data-theme="dark"] .page button[style*="background: #fff"]{background:#263244!important;color:#f3f4f6!important}
+body[data-theme="dark"] .page button[style*="background:white"] small,
+body[data-theme="dark"] .page button[style*="background: white"] small,
+body[data-theme="dark"] .page button[style*="background:#fff"] small{color:#b8c3d2}
+body[data-theme="dark"] .page [style*="background:#edf4ff"],
+body[data-theme="dark"] .page [style*="background: #edf4ff"],
+body[data-theme="dark"] .page [style*="background:#eaf2ff"]{background:#263d60!important;color:#c5d9ff!important}
+body[data-theme="dark"] .page [style*="background:#f5f8ff"],
+body[data-theme="dark"] .page [style*="background: #f5f8ff"],
+body[data-theme="dark"] .page [style*="background:#f6f8fc"],
+body[data-theme="dark"] .page [style*="background: #f6f8fc"],
+body[data-theme="dark"] .page [style*="background:#f7f9fc"],
+body[data-theme="dark"] .page [style*="background: #f7f9fc"]{background:#263244!important;color:#f3f4f6!important}
+body[data-theme="dark"] .page [style*="border-bottom:1px solid"]{border-bottom-color:#3b4759!important}
+body[data-theme="dark"] .page input::placeholder{color:#aab4c3}
+body[data-theme="dark"] .page .pending-badge,body[data-theme="dark"] .page .owner-pending{color:#ffd58a}
+</style></head>
 <body><main class="app">
 <header class="top"><h1>开支记账分析助手</h1><div class="appearance-switch" role="group" aria-label="页面外观"><button type="button" id="themeLightBtn" class="active" onclick="setAppTheme('light')">☀️ 亮色</button><button type="button" id="themeDarkBtn" onclick="setAppTheme('dark')">🌙 暗色</button></div></header>
 <section id="home" class="page active">
