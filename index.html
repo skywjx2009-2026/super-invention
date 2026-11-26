@@ -175,6 +175,7 @@ function renderHome(){
  const bills=getSavedBills(),now=new Date();
  if(!window.homeMonthInitialized){const ds=bills.map(x=>dateParts(x.time)).filter(Boolean).sort((a,b)=>a.key.localeCompare(b.key));if(ds.length){homeYear=Number(ds[ds.length-1].year);m=Number(ds[ds.length-1].month);}else{homeYear=now.getFullYear();m=now.getMonth()+1;}window.homeMonthInitialized=true;}
  const key=homeYear+'-'+String(m).padStart(2,'0'),data=bills.filter(x=>{const d=dateParts(x.time);return d&&d.key===key;});
+ window.analysisFilteredBills=data;
  const income=data.filter(x=>x.direction==='收入').reduce((a,x)=>a+Number(x.amount||0),0),expense=data.filter(x=>x.direction==='支出').reduce((a,x)=>a+Number(x.amount||0),0),days=new Set(data.filter(x=>x.direction==='支出').map(x=>String(x.time||'').slice(0,10))).size;
  const put=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v;};
  put('monthLabel',homeYear+'年'+m+'月');put('expense',money(expense));put('homeIncome',money(income));put('homeBalance',money(income-expense));put('homeDaily',money(days?expense/days:0));put('homeCount',data.length+' 笔');put('homeMax',money(Math.max(0,...data.filter(x=>x.direction==='支出').map(x=>Number(x.amount||0)))));
@@ -226,8 +227,8 @@ function renderAnalysis(){
  de.innerHTML=data.slice().sort((a,b)=>String(b.time).localeCompare(String(a.time))).slice(0,100).map(x=>'<div class="tx"><div class="txmain"><b>'+escapeHtml(x.counterparty||x.product||'未填写交易对象')+'</b><small>'+escapeHtml(x.time||'')+' · '+escapeHtml(x.category||'未分类')+'</small></div><div class="money '+(x.direction==='收入'?'income':'')+'">'+(x.direction==='支出'?'-':x.direction==='收入'?'+':'')+money(x.amount)+'</div></div>').join('')||'<p class="muted">当前筛选条件下暂无账单</p>';
 }
 document.addEventListener('click',function(e){
- const month=e.target.closest('[data-bi-month]');if(month){const key=month.dataset.biMonth,rows=getSavedBills().filter(x=>{const d=dateParts(x.time);return d&&d.key===key;});showAnalysisDrilldown(key+' 收支明细',rows);return;}
- const category=e.target.closest('[data-bi-category]');if(category){const name=decodeURIComponent(category.dataset.biCategory),rows=getSavedBills().filter(x=>x.direction==='支出'&&(name==='未分类'?(!x.category||x.category==='未分类'):x.category===name));showAnalysisDrilldown(name+' 支出明细',rows);}
+ const month=e.target.closest('[data-bi-month]');if(month){const key=month.dataset.biMonth,rows=(window.analysisFilteredBills||[]).filter(x=>{const d=dateParts(x.time);return d&&d.key===key;});showAnalysisDrilldown(key+' 收支明细',rows);return;}
+ const category=e.target.closest('[data-bi-category]');if(category){const name=decodeURIComponent(category.dataset.biCategory),rows=(window.analysisFilteredBills||[]).filter(x=>x.direction==='支出'&&(name==='未分类'?(!x.category||x.category==='未分类'):x.category===name));showAnalysisDrilldown(name+' 支出明细',rows);}
 });
 loadCategoryConfig();renderHome();
 </script></body></html>
