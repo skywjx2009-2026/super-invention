@@ -18,13 +18,13 @@
 <div class="section"><h2>最近交易</h2><span onclick="go('bills')">全部账单 ›</span></div><div class="card"><div class="tx"><div class="icon">🍜</div><div class="txmain"><b>午餐 · 小馆</b><small>今天 12:18 · 餐饮</small></div><div class="money">-¥38.00</div></div><div class="tx"><div class="icon">🚕</div><div class="txmain"><b>网约车</b><small>今天 09:42 · 交通出行</small></div><div class="money">-¥26.50</div></div><div class="tx"><div class="icon">💰</div><div class="txmain"><b>工资收入</b><small>11月25日 · 工资</small></div><div class="money income">+¥12,800.00</div></div><div class="tx" style="border:0"><div class="icon">☕</div><div class="txmain"><b>咖啡</b><small>11月25日 · 餐饮</small></div><div class="money">-¥28.00</div></div></div>
 </section>
 <section id="bills" class="page"><div class="section"><h2>账单明细</h2><span>筛选 ⌄</span></div><div class="card"><input id="billSearch" placeholder="搜索交易对象、商品或备注" oninput="renderBills()" style="width:100%;padding:12px;border:1px solid var(--line);border-radius:10px"><p class="muted" id="billCount">本机已保存账单</p><div id="billList"><div class="empty">尚未导入真实账单。请前往「我的」导入微信账单。</div></div></div></section>
-<section id="cats" class="page"><div class="section"><h2>分类管理</h2><span>管理收支类别</span></div><div class="card"><h3>支出分类</h3><span class="pill">餐饮</span><span class="pill">交通出行</span><span class="pill">居家生活</span><span class="pill">购物</span><span class="pill">医疗健康</span><span class="pill">娱乐</span><span class="pill">教育</span><span class="pill">其他</span><hr style="border:0;border-top:1px solid var(--line)"><h3>收入分类</h3><span class="pill">工资</span><span class="pill">奖金</span><span class="pill">理财收入</span><span class="pill">其他收入</span><div class="empty">后续支持新增分类、二级分类、自动分类规则及人工调整。</div></div></section>
+<section id="cats" class="page"><div class="section"><h2>分类管理</h2><span>自动分类与人工调整</span></div><div class="card"><div class="stats"><div class="stat"><small>账单总数</small><b id="catTotal">0</b></div><div class="stat"><small>已分类</small><b id="catDone">0</b></div><div class="stat"><small>未分类</small><b id="catPending">0</b></div></div><button onclick="autoClassifyBills()" style="border:0;border-radius:10px;background:#3978f6;color:white;padding:12px;width:100%;font-size:14px">自动分类未分类账单</button><p class="muted" style="line-height:1.7">自动分类只处理「未分类」账单，不会覆盖你手动确认过的分类。无法判断的记录会继续保留为未分类。</p></div><div class="section"><h2>支出分类汇总</h2></div><div class="card" id="expenseCategorySummary"><p class="muted">暂无数据</p></div><div class="section"><h2>收入分类汇总</h2></div><div class="card" id="incomeCategorySummary"><p class="muted">暂无数据</p></div></section>
 <section id="analysis" class="page"><div class="section"><h2>BI 数据分析</h2><span>分析看板</span></div><div class="card"><div class="empty">选择年份、月份、收支类型、一级/二级分类、交易对象和金额区间，查看多维度收支分析。</div><div class="stats"><div class="stat"><small>总收入</small><b>¥12,800</b></div><div class="stat"><small>总支出</small><b>¥3,286</b></div><div class="stat"><small>结余</small><b>¥9,513</b></div></div><h3>计划分析内容</h3><p class="muted">分类占比 · 月度趋势 · 每日支出 · 同比/环比 · 支出 TOP10 · 账单明细下钻</p></div></section>
 <section id="mine" class="page"><div class="section"><h2>我的</h2><span>个人与数据设置</span></div><div class="card"><div class="tx"><div class="icon">📥</div><div class="txmain"><b>微信账单导入</b><small>在本机浏览器读取文件，不上传账单内容</small></div><span>›</span></div>
 <div style="padding:4px 0 16px"><input id="billFile" type="file" accept=".xlsx,.xls,.csv" style="width:100%;font-size:13px"><button onclick="readBillFile()" style="margin-top:10px;border:0;border-radius:10px;background:#3978f6;color:white;padding:11px 16px;width:100%;font-size:14px">读取并预览账单</button><p class="muted" id="importStatus" style="line-height:1.7">支持微信官方导出的 Excel/CSV。文件仅在当前浏览器本地解析，不会发送到网站服务器。首次读取 Excel 需要联网加载解析组件。</p><div id="importPreview"></div></div><div class="tx"><div class="icon">🗂️</div><div class="txmain"><b>导入历史</b><small>查看文件导入记录</small></div><span>›</span></div><div class="tx"><div class="icon">🔄</div><div class="txmain"><b>备份与恢复</b><small>数据备份管理（待开发）</small></div><span>›</span></div><div class="tx" style="border:0"><div class="icon">⚙️</div><div class="txmain"><b>系统设置</b><small>分类规则与偏好设置</small></div><span>›</span></div></div><p class="muted" style="text-align:center;margin-top:22px">开支记账分析助手 · 原型版本 0.1</p></section>
 </main><nav class="tabs"><button class="active" onclick="go('home',this)"><strong>⌂</strong>首页</button><button onclick="go('bills',this)"><strong>▤</strong>账单</button><button onclick="go('cats',this)"><strong>▦</strong>分类</button><button onclick="go('analysis',this)"><strong>▥</strong>分析</button><button onclick="go('mine',this)"><strong>♙</strong>我的</button></nav>
 <script>
-function go(id,el){document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));document.getElementById(id).classList.add('active');document.querySelectorAll('.tabs button').forEach(x=>x.classList.remove('active'));if(el)el.classList.add('active');else{const i={home:0,bills:1,cats:2,analysis:3,mine:4}[id];document.querySelectorAll('.tabs button')[i].classList.add('active')}window.scrollTo(0,0)}
+function go(id,el){document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));document.getElementById(id).classList.add('active');document.querySelectorAll('.tabs button').forEach(x=>x.classList.remove('active'));if(el)el.classList.add('active');else{const i={home:0,bills:1,cats:2,analysis:3,mine:4}[id];document.querySelectorAll('.tabs button')[i].classList.add('active')}if(id==='cats')renderCategorySummary();if(id==='bills')renderBills();window.scrollTo(0,0)}
 let m=11;function shift(d){m+=d;if(m<1)m=12;if(m>12)m=1;document.getElementById('monthLabel').textContent='2026年'+m+'月';}
 </script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -83,13 +83,58 @@ function confirmImport(){
  document.getElementById('importPreview').insertAdjacentHTML('beforeend','<p class="muted">已保存到当前浏览器本机。换设备或清除浏览器数据可能导致数据无法继续访问，请后续使用备份功能。</p>');
  renderBills();alert('导入完成，新增 '+added.length+' 笔账单。');
 }
+const EXPENSE_CATEGORIES=['餐饮','交通出行','居家生活','购物','医疗健康','娱乐','教育','通讯数码','人情往来','其他'];
+const INCOME_CATEGORIES=['工资','奖金','理财收入','退款/报销','其他收入'];
+const SUBCATEGORIES={
+ '餐饮':['早餐','午餐','晚餐','零食饮品','外卖','聚餐'],
+ '交通出行':['加油','停车缴费','公共交通','打车','高速通行','车辆维护'],
+ '居家生活':['水电燃气','物业','日用品','家政维修'],
+ '购物':['服饰鞋包','日用百货','数码电器','网购'],
+ '医疗健康':['体检','看病','药品','保健护理'],
+ '娱乐':['电影演出','游戏','旅游','休闲活动'],
+ '教育':['课程培训','书籍资料'],
+ '通讯数码':['手机话费','网络通信','软件会员'],
+ '人情往来':['礼金','请客送礼'],
+ '工资':['固定工资','其他薪酬'],
+ '奖金':['绩效奖金','年终奖金'],
+ '退款/报销':['消费退款','费用报销']
+};
+const CATEGORY_RULES=[
+ {c:'交通出行',s:'停车缴费',w:['停车','停车缴费','顺易通']},
+ {c:'交通出行',s:'加油',w:['加油','石油','壳牌','中石化','中石油','加油站']},
+ {c:'交通出行',s:'公共交通',w:['地铁','公交','交通卡']},
+ {c:'交通出行',s:'打车',w:['网约车','出租车','滴滴','打车']},
+ {c:'交通出行',s:'高速通行',w:['高速','通行费']},
+ {c:'餐饮',s:'早餐',w:['早餐']},{c:'餐饮',s:'午餐',w:['午餐']},{c:'餐饮',s:'晚餐',w:['晚餐']},
+ {c:'餐饮',s:'零食饮品',w:['咖啡','奶茶','饮品','面包','小吃']},
+ {c:'餐饮',s:'外卖',w:['外卖']},{c:'餐饮',s:'聚餐',w:['餐厅','饭店','餐饮','美食']},
+ {c:'医疗健康',s:'体检',w:['体检','健康体检']},{c:'医疗健康',s:'看病',w:['医院','诊所']},{c:'医疗健康',s:'药品',w:['药店','药房','药品']},
+ {c:'购物',s:'网购',w:['淘宝','天猫','京东','拼多多']},{c:'购物',s:'日用百货',w:['超市','便利店','百货']},
+ {c:'居家生活',s:'水电燃气',w:['水费','电费','燃气']},{c:'居家生活',s:'物业',w:['物业']},
+ {c:'通讯数码',s:'手机话费',w:['话费','通信缴费']},
+ {c:'娱乐',s:'电影演出',w:['电影','影院','演出']},
+ {c:'工资',s:'固定工资',w:['工资','薪资']},{c:'奖金',s:'绩效奖金',w:['奖金','绩效']},
+ {c:'退款/报销',s:'消费退款',w:['退款','退货']}
+];
+function getSubcategories(category){return SUBCATEGORIES[category]||[]}
+function changeBillCategory(encodedId,category){const id=decodeURIComponent(encodedId),b=getSavedBills(),i=b.findIndex(x=>x.id===id);if(i<0)return;b[i].category=category;b[i].subcategory='';localStorage.setItem(WECHAT_STORE_KEY,JSON.stringify(b));renderBills();renderCategorySummary();}
+function changeBillSubcategory(encodedId,subcategory){const id=decodeURIComponent(encodedId),b=getSavedBills(),i=b.findIndex(x=>x.id===id);if(i<0)return;b[i].subcategory=subcategory;localStorage.setItem(WECHAT_STORE_KEY,JSON.stringify(b));renderCategorySummary();}
+function autoClassifyBills(){const b=getSavedBills();let changed=0;b.forEach(x=>{if(x.category&&x.category!=='未分类')return;const text=(String(x.counterparty||'')+' '+String(x.product||'')+' '+String(x.remark||'')).toLowerCase();let rule=CATEGORY_RULES.find(r=>r.w.some(w=>text.includes(w.toLowerCase())));if(rule&&(x.direction==='支出'||x.direction==='收入'&&['工资','奖金','退款/报销'].includes(rule.c))){x.category=rule.c;x.subcategory=rule.s;changed++;}});localStorage.setItem(WECHAT_STORE_KEY,JSON.stringify(b));renderBills();renderCategorySummary();alert('自动分类完成：本次分类 '+changed+' 笔。未能判断的账单仍保留为未分类。');}
+function renderCategorySummary(){const b=getSavedBills(),pending=b.filter(x=>!x.category||x.category==='未分类').length;const set=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v};set('catTotal',b.length);set('catDone',b.length-pending);set('catPending',pending);const build=(cats,dir)=>{const rows=cats.map(c=>{const a=b.filter(x=>x.direction===dir&&x.category===c);return {c,n:a.length,sum:a.reduce((s,x)=>s+Number(x.amount||0),0)}}).filter(x=>x.n);return rows.length?rows.map(x=>'<div class="catrow"><span>'+x.c+'（'+x.n+'笔）</span><b>¥'+x.sum.toFixed(2)+'</b></div>').join(''):'<p class="muted">暂无已分类账单</p>'};const e=document.getElementById('expenseCategorySummary'),i=document.getElementById('incomeCategorySummary');if(e)e.innerHTML=build(EXPENSE_CATEGORIES,'支出');if(i)i.innerHTML=build(INCOME_CATEGORIES,'收入');}
 function renderBills(){
  const list=document.getElementById('billList');if(!list)return;
  const bills=getSavedBills().slice().sort((a,b)=>b.time.localeCompare(a.time));
  const q=(document.getElementById('billSearch')?.value||'').trim().toLowerCase();
- const filtered=bills.filter(x=>[x.counterparty,x.product,x.remark,x.category].join(' ').toLowerCase().includes(q));
+ const filtered=bills.filter(x=>[x.counterparty,x.product,x.remark,x.category,x.subcategory].join(' ').toLowerCase().includes(q));
  document.getElementById('billCount').textContent='本机已保存 '+bills.length+' 笔 · 当前显示 '+filtered.length+' 笔';
- list.innerHTML=filtered.slice(0,150).map(x=>'<div class="tx"><div class="icon">'+(x.direction==='收入'?'💰':x.direction==='支出'?'🧾':'↔️')+'</div><div class="txmain"><b>'+escapeHtml(x.counterparty||x.product||'未填写交易对象')+'</b><small>'+escapeHtml(x.time)+' · '+escapeHtml(x.category)+' · '+escapeHtml(x.status)+'</small></div><div class="money '+(x.direction==='收入'?'income':'')+'">'+(x.direction==='支出'?'-':x.direction==='收入'?'+':'')+'¥'+x.amount.toFixed(2)+'</div></div>').join('')||(bills.length?'<div class="empty">没有符合搜索条件的账单。</div>':'<div class="empty">尚未导入真实账单。请前往「我的」导入微信账单。</div>');
+ list.innerHTML=filtered.slice(0,150).map(x=>{
+  const id=encodeURIComponent(x.id);
+  const cats=x.direction==='收入'?INCOME_CATEGORIES:EXPENSE_CATEGORIES;
+  const opts=cats.map(c=>'<option value="'+c+'" '+(x.category===c?'selected':'')+'>'+c+'</option>').join('');
+  const subs=getSubcategories(x.category);
+  const subopts=subs.map(s=>'<option value="'+s+'" '+((x.subcategory||'')===s?'selected':'')+'>'+s+'</option>').join('');
+  return '<div class="tx" style="align-items:flex-start"><div class="icon">'+(x.direction==='收入'?'💰':x.direction==='支出'?'🧾':'↔️')+'</div><div class="txmain"><b>'+escapeHtml(x.counterparty||x.product||'未填写交易对象')+'</b><small>'+escapeHtml(x.time)+' · '+escapeHtml(x.status)+'</small><div style="display:flex;gap:6px;margin-top:7px;flex-wrap:wrap"><select onchange="changeBillCategory(\''+id+'\',this.value)" style="max-width:115px;border:1px solid var(--line);border-radius:7px;padding:5px;font-size:11px;background:white"><option value="未分类" '+((!x.category||x.category==='未分类')?'selected':'')+'>未分类</option>'+opts+'</select><select onchange="changeBillSubcategory(\''+id+'\',this.value)" style="max-width:105px;border:1px solid var(--line);border-radius:7px;padding:5px;font-size:11px;background:white"><option value="">二级分类</option>'+subopts+'</select></div></div><div class="money '+(x.direction==='收入'?'income':'')+'">'+(x.direction==='支出'?'-':x.direction==='收入'?'+':'')+'¥'+Number(x.amount).toFixed(2)+'</div></div>';
+ }).join('')||(bills.length?'<div class="empty">没有符合搜索条件的账单。</div>':'<div class="empty">尚未导入真实账单。请前往「我的」导入微信账单。</div>');
 }
 function escapeHtml(s){return s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 </script></body></html>
