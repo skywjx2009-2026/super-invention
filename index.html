@@ -312,6 +312,133 @@ body[data-theme="glass"] #categorySettingsModalV3,
 body[data-theme="glass"] #unifiedOffsetModal,
 body[data-theme="glass"] #refundOffsetManagerModal{background:var(--app-overlay)!important}
 
+
+/* ===== Unified design system v1: Apple-inspired light / dark / glass / custom ===== */
+:root{
+ --ds-page:#f5f6fa;--ds-surface:#ffffff;--ds-surface-2:#f1f3f7;--ds-surface-3:#e9edf4;
+ --ds-text:#1c1c1e;--ds-text-2:#555b66;--ds-text-3:#747b87;--ds-line:#e3e6ec;
+ --ds-control:#f0f1f5;--ds-control-text:#30343b;--ds-selected:#3478f6;--ds-selected-text:#ffffff;
+ --ds-focus:rgba(52,120,246,.22);--ds-overlay:rgba(15,23,42,.48);--ds-shadow:0 6px 22px rgba(24,35,55,.07);
+ --ds-glass-border:rgba(255,255,255,.72);--ds-glass-shadow:0 10px 28px rgba(45,65,95,.12);
+ --ds-radius:16px;
+}
+body{background:var(--ds-page);color:var(--ds-text);color-scheme:light;transition:background-color .2s ease,color .2s ease}
+body[data-theme="dark"]{
+ --ds-page:#101318;--ds-surface:#1c232d;--ds-surface-2:#252e3a;--ds-surface-3:#303b49;
+ --ds-text:#f3f5f8;--ds-text-2:#c2cad5;--ds-text-3:#a1adbc;--ds-line:#394554;
+ --ds-control:#2b3542;--ds-control-text:#f0f3f7;--ds-selected:#4b8df8;--ds-selected-text:#fff;
+ --ds-focus:rgba(104,160,255,.28);--ds-overlay:rgba(0,0,0,.68);--ds-shadow:0 8px 26px rgba(0,0,0,.22);
+ color-scheme:dark;
+}
+body[data-theme="glass"]{
+ --ds-page:#e8eef7;--ds-surface:rgba(255,255,255,.62);--ds-surface-2:rgba(255,255,255,.43);--ds-surface-3:rgba(255,255,255,.30);
+ --ds-text:#1b2b40;--ds-text-2:#4e6076;--ds-text-3:#63758b;--ds-line:rgba(83,108,143,.22);
+ --ds-control:rgba(255,255,255,.46);--ds-control-text:#20344d;--ds-selected:rgba(91,148,218,.30);--ds-selected-text:#174d85;
+ --ds-focus:rgba(66,130,205,.22);--ds-overlay:rgba(27,43,64,.34);--ds-shadow:0 10px 28px rgba(54,79,112,.10);
+ color-scheme:light;
+}
+body[data-theme="custom"]{
+ --ds-page:var(--bg,#eaf3ff);--ds-surface:color-mix(in srgb,var(--card,#fff) 94%,transparent);
+ --ds-surface-2:color-mix(in srgb,var(--card,#fff) 78%,transparent);--ds-surface-3:color-mix(in srgb,var(--card,#fff) 64%,transparent);
+ --ds-text:var(--text,#1c1c1e);--ds-text-2:color-mix(in srgb,var(--ds-text) 76%,#808080);
+ --ds-text-3:color-mix(in srgb,var(--ds-text) 62%,#999);
+ --ds-line:color-mix(in srgb,var(--ds-text) 14%,transparent);
+ --ds-control:color-mix(in srgb,var(--card,#fff) 82%,transparent);--ds-control-text:var(--ds-text);
+ --ds-selected:color-mix(in srgb,var(--blue,#3978f6) 20%,var(--card,#fff));--ds-selected-text:var(--ds-text);
+ --ds-focus:color-mix(in srgb,var(--blue,#3978f6) 24%,transparent);--ds-overlay:rgba(15,23,42,.48);
+ --ds-shadow:0 8px 24px rgba(30,45,65,.10);
+}
+body[data-theme="glass"]{background:linear-gradient(145deg,#dceafa 0%,#f0eafa 52%,#e0f0ed 100%) fixed}
+body[data-theme="glass"] .app{background:transparent}
+body[data-theme="custom"]{background-color:var(--ds-page);background-image:var(--custom-bg-image,none);background-size:cover;background-position:center;background-attachment:fixed}
+body[data-theme="custom"] .app{background:transparent}
+
+/* Semantic surfaces: all content containers use the same theme pairings. */
+.card,.stat,.bi-filter-panel,.tabs,
+#systemSettingsModal>div,#categorySettingsModalV3>div,#backupRestoreModal>div,#importHistoryModal>div,
+#homeCategoryModal>div,#billDetailModal>div,#unifiedOffsetModal>div,#refundOffsetManagerModal>div,
+.modal>div{
+ background:var(--ds-surface)!important;color:var(--ds-text)!important;border-color:var(--ds-line)!important;
+ box-shadow:var(--ds-shadow);
+}
+.card .card,.card .stat{background:var(--ds-surface-2)!important;color:var(--ds-text)!important}
+body[data-theme="glass"] .card,body[data-theme="glass"] .stat,body[data-theme="glass"] .tabs,
+body[data-theme="glass"] #systemSettingsModal>div,body[data-theme="glass"] #categorySettingsModalV3>div,
+body[data-theme="glass"] #backupRestoreModal>div,body[data-theme="glass"] #importHistoryModal>div,
+body[data-theme="glass"] #homeCategoryModal>div,body[data-theme="glass"] #billDetailModal>div,
+body[data-theme="glass"] .modal>div{
+ background:var(--ds-surface)!important;border:1px solid var(--ds-glass-border)!important;
+ -webkit-backdrop-filter:blur(24px) saturate(165%);backdrop-filter:blur(24px) saturate(165%);
+ box-shadow:var(--ds-glass-shadow)
+}
+body[data-theme="glass"] .card .card,body[data-theme="glass"] .card .stat{background:var(--ds-surface-2)!important}
+body[data-theme="custom"] .card,body[data-theme="custom"] .stat,body[data-theme="custom"] .tabs,
+body[data-theme="custom"] .modal>div{background:var(--ds-surface)!important;backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}
+
+/* Typography and dividers */
+.app,.page,.section h2,.txmain b,.money,.card b,.stat b{color:var(--ds-text)}
+.muted,.stat small,.txmain small,.section span,.empty,.legend,.month{color:var(--ds-text-3)!important}
+.tx,.section,.balance,.bi-filter-panel,.card hr{border-color:var(--ds-line)!important}
+body[data-theme="glass"] .tx,body[data-theme="glass"] .section{border-color:var(--ds-line)!important}
+.track{background:var(--ds-surface-3)!important}
+.icon{background:var(--ds-surface-2)!important;color:var(--ds-text)!important}
+
+/* Buttons: neutral controls, selected controls and primary actions remain distinct. */
+button{font-family:inherit}
+button:not(.tabs button):not(.theme-choice):not([style*="background:#3978f6"]):not([style*="background: #3978f6"]):not([style*="background:#3478f6"]):not([style*="background: #3478f6"]):not([style*="background:linear-gradient"]):not([style*="background: linear-gradient"]){
+ border-color:var(--ds-line);
+}
+button:not(.tabs button):not(.theme-choice):not([style*="background:#3978f6"]):not([style*="background: #3978f6"]):not([style*="background:#3478f6"]):not([style*="background: #3478f6"]):not([style*="background:linear-gradient"]):not([style*="background: linear-gradient"]):not([style*="background:#ef"]):not([style*="background: #ef"]){
+ color:var(--ds-control-text);
+}
+button[style*="background:white"],button[style*="background: white"],
+button[style*="background:#fff"],button[style*="background: #fff"],
+button[style*="background:#f1f3f7"],button[style*="background: #f1f3f7"],
+button[style*="background:#eef3ff"],button[style*="background: #eef3ff"],
+button[style*="background:#f8fafc"],button[style*="background: #f8fafc"]{
+ background:var(--ds-control)!important;color:var(--ds-control-text)!important;-webkit-text-fill-color:var(--ds-control-text)!important;
+ border:1px solid var(--ds-line)!important
+}
+button[aria-pressed="true"],button.active,.theme-choice.active{
+ background:var(--ds-selected)!important;color:var(--ds-selected-text)!important;-webkit-text-fill-color:var(--ds-selected-text)!important;
+ border-color:color-mix(in srgb,var(--ds-selected-text) 20%,var(--ds-line))!important
+}
+body[data-theme="glass"] button:not(.tabs button):not(.theme-choice){backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.tabs{background:var(--ds-surface)!important;border-top:1px solid var(--ds-line)!important}
+.tabs button{background:transparent!important;color:var(--ds-text-3)!important}
+.tabs button.active{color:var(--blue)!important}
+.theme-choice{background:var(--ds-surface-2)!important;color:var(--ds-text)!important;border-color:var(--ds-line)!important}
+.theme-choice.active{background:var(--ds-selected)!important;color:var(--ds-selected-text)!important}
+.theme-choice.active small{color:inherit!important;opacity:.82}
+.theme-action-button{background:var(--ds-control)!important;color:var(--ds-control-text)!important;-webkit-text-fill-color:var(--ds-control-text)!important;border:1px solid var(--ds-line)!important}
+
+/* Form controls, switches and keyboard focus */
+input:not([type="file"]):not([type="color"]),select,textarea{
+ background:var(--ds-control)!important;color:var(--ds-control-text)!important;border-color:var(--ds-line)!important;
+}
+input::placeholder,textarea::placeholder{color:var(--ds-text-3)!important;opacity:1}
+input[type="checkbox"],input[type="radio"],input[type="range"]{accent-color:var(--blue)}
+input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid var(--ds-focus);outline-offset:2px}
+body[data-theme="glass"] input:not([type="file"]):not([type="color"]),body[data-theme="glass"] select,body[data-theme="glass"] textarea{
+ background:rgba(255,255,255,.48)!important;border-color:rgba(83,108,143,.25)!important
+}
+
+/* Keep semantic business colors independent from the selected appearance. */
+.income{color:var(--green)!important}
+.expense{color:var(--red)!important}
+body[data-theme="dark"] .tag{background:#403a2e;color:#f5d18b}
+body[data-theme="glass"] .tag{background:rgba(255,246,220,.72);color:#80551a}
+
+/* Modal overlays and preview cards */
+#systemSettingsModal,#categorySettingsModalV3,#backupRestoreModal,#importHistoryModal,#homeCategoryModal,#billDetailModal{
+ background:var(--ds-overlay)!important
+}
+body[data-theme="glass"] #systemSettingsModal,body[data-theme="glass"] #categorySettingsModalV3,
+body[data-theme="glass"] #backupRestoreModal,body[data-theme="glass"] #importHistoryModal,
+body[data-theme="glass"] #homeCategoryModal,body[data-theme="glass"] #billDetailModal{background:var(--ds-overlay)!important}
+@media (prefers-reduced-motion:reduce){body{transition:none!important}}
+/* ===== End unified design system v1 ===== */
+
 </style></head>
 <body><main class="app">
 <header class="top"><h1>开支记账分析助手</h1><span class="tag">本机数据 · 原型版本</span></header>
