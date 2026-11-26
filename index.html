@@ -110,10 +110,10 @@ body[data-theme="dark"] #billDetailContent [data-category-tag]{background:#26344
 body[data-theme="dark"] #billDetailContent [data-category-tag][aria-pressed="true"]{background:#1d4ed8!important;color:#ffffff!important;border:2px solid #93c5fd!important;box-shadow:0 0 0 2px #60a5fa55,0 2px 8px #0006!important;font-weight:800!important;}
 body[data-theme="dark"] #billDetailContent [data-category-tag="冲销抵账"][aria-pressed="true"]{background:#991b1b!important;color:#ffffff!important;border:2px solid #fca5a5!important;box-shadow:0 0 0 2px #ef444455,0 2px 8px #0006!important;}
 
-/* 手动记账：iOS 日期时间控件内部文字垂直居中 */
-#manualTime{display:flex;align-items:center;line-height:normal}
-#manualTime::-webkit-datetime-edit{display:flex;align-items:center;padding:0;height:100%;line-height:normal}
-#manualTime::-webkit-date-and-time-value{display:flex;align-items:center;min-height:1em;line-height:normal;text-align:left}
+/* 手动记账：校正 iOS 日期时间控件内部文字的垂直位置 */
+#manualTime{line-height:44px}
+#manualTime::-webkit-datetime-edit{padding:0;line-height:44px}
+#manualTime::-webkit-date-and-time-value{display:inline-block;line-height:normal;vertical-align:middle;position:relative;top:3px;text-align:left}
 </style></head>
 <body><main class="app">
 <header class="top"><h1>开支记账分析助手</h1><div class="appearance-switch" role="group" aria-label="页面外观"><button type="button" id="themeLightBtn" class="active" onclick="setAppTheme('light')">☀️ 亮色</button><button type="button" id="themeDarkBtn" onclick="setAppTheme('dark')">🌙 暗色</button></div></header>
