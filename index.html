@@ -20,9 +20,42 @@
 <section id="bills" class="page"><div class="section"><h2>账单明细</h2><span>筛选 ⌄</span></div><div class="card"><input placeholder="搜索交易对象或备注" style="width:100%;padding:12px;border:1px solid var(--line);border-radius:10px"><p class="muted">全部　　支出　　收入　　按月份</p><div class="tx"><div class="icon">🍜</div><div class="txmain"><b>午餐 · 小馆</b><small>今天 12:18 · 餐饮</small></div><div class="money">-¥38.00</div></div><div class="tx"><div class="icon">🚕</div><div class="txmain"><b>网约车</b><small>今天 09:42 · 交通出行</small></div><div class="money">-¥26.50</div></div><div class="tx"><div class="icon">💰</div><div class="txmain"><b>工资收入</b><small>11月25日 · 工资</small></div><div class="money income">+¥12,800.00</div></div><div class="empty">当前仅展示演示账单。真实账单导入功能尚未接入。</div></div></section>
 <section id="cats" class="page"><div class="section"><h2>分类管理</h2><span>管理收支类别</span></div><div class="card"><h3>支出分类</h3><span class="pill">餐饮</span><span class="pill">交通出行</span><span class="pill">居家生活</span><span class="pill">购物</span><span class="pill">医疗健康</span><span class="pill">娱乐</span><span class="pill">教育</span><span class="pill">其他</span><hr style="border:0;border-top:1px solid var(--line)"><h3>收入分类</h3><span class="pill">工资</span><span class="pill">奖金</span><span class="pill">理财收入</span><span class="pill">其他收入</span><div class="empty">后续支持新增分类、二级分类、自动分类规则及人工调整。</div></div></section>
 <section id="analysis" class="page"><div class="section"><h2>BI 数据分析</h2><span>分析看板</span></div><div class="card"><div class="empty">选择年份、月份、收支类型、一级/二级分类、交易对象和金额区间，查看多维度收支分析。</div><div class="stats"><div class="stat"><small>总收入</small><b>¥12,800</b></div><div class="stat"><small>总支出</small><b>¥3,286</b></div><div class="stat"><small>结余</small><b>¥9,513</b></div></div><h3>计划分析内容</h3><p class="muted">分类占比 · 月度趋势 · 每日支出 · 同比/环比 · 支出 TOP10 · 账单明细下钻</p></div></section>
-<section id="mine" class="page"><div class="section"><h2>我的</h2><span>个人与数据设置</span></div><div class="card"><div class="tx"><div class="icon">📥</div><div class="txmain"><b>微信账单导入</b><small>支持官方导出文件解析（待开发）</small></div><span>›</span></div><div class="tx"><div class="icon">🗂️</div><div class="txmain"><b>导入历史</b><small>查看文件导入记录</small></div><span>›</span></div><div class="tx"><div class="icon">🔄</div><div class="txmain"><b>备份与恢复</b><small>数据备份管理（待开发）</small></div><span>›</span></div><div class="tx" style="border:0"><div class="icon">⚙️</div><div class="txmain"><b>系统设置</b><small>分类规则与偏好设置</small></div><span>›</span></div></div><p class="muted" style="text-align:center;margin-top:22px">开支记账分析助手 · 原型版本 0.1</p></section>
+<section id="mine" class="page"><div class="section"><h2>我的</h2><span>个人与数据设置</span></div><div class="card"><div class="tx"><div class="icon">📥</div><div class="txmain"><b>微信账单导入</b><small>在本机浏览器读取文件，不上传账单内容</small></div><span>›</span></div>
+<div style="padding:4px 0 16px"><input id="billFile" type="file" accept=".xlsx,.xls,.csv" style="width:100%;font-size:13px"><button onclick="readBillFile()" style="margin-top:10px;border:0;border-radius:10px;background:#3978f6;color:white;padding:11px 16px;width:100%;font-size:14px">读取并预览账单</button><p class="muted" id="importStatus" style="line-height:1.7">支持微信官方导出的 Excel/CSV。文件仅在当前浏览器本地解析，不会发送到网站服务器。首次读取 Excel 需要联网加载解析组件。</p><div id="importPreview"></div></div><div class="tx"><div class="icon">🗂️</div><div class="txmain"><b>导入历史</b><small>查看文件导入记录</small></div><span>›</span></div><div class="tx"><div class="icon">🔄</div><div class="txmain"><b>备份与恢复</b><small>数据备份管理（待开发）</small></div><span>›</span></div><div class="tx" style="border:0"><div class="icon">⚙️</div><div class="txmain"><b>系统设置</b><small>分类规则与偏好设置</small></div><span>›</span></div></div><p class="muted" style="text-align:center;margin-top:22px">开支记账分析助手 · 原型版本 0.1</p></section>
 </main><nav class="tabs"><button class="active" onclick="go('home',this)"><strong>⌂</strong>首页</button><button onclick="go('bills',this)"><strong>▤</strong>账单</button><button onclick="go('cats',this)"><strong>▦</strong>分类</button><button onclick="go('analysis',this)"><strong>▥</strong>分析</button><button onclick="go('mine',this)"><strong>♙</strong>我的</button></nav>
 <script>
 function go(id,el){document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));document.getElementById(id).classList.add('active');document.querySelectorAll('.tabs button').forEach(x=>x.classList.remove('active'));if(el)el.classList.add('active');else{const i={home:0,bills:1,cats:2,analysis:3,mine:4}[id];document.querySelectorAll('.tabs button')[i].classList.add('active')}window.scrollTo(0,0)}
 let m=11;function shift(d){m+=d;if(m<1)m=12;if(m>12)m=1;document.getElementById('monthLabel').textContent='2026年'+m+'月';}
+</script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script>
+async function readBillFile(){
+ const input=document.getElementById('billFile'), status=document.getElementById('importStatus'), box=document.getElementById('importPreview');
+ const file=input.files&&input.files[0]; if(!file){status.textContent='请先选择微信账单文件。';return;}
+ status.textContent='正在本机读取文件……';box.innerHTML='';
+ try{
+  let rows=[];
+  if(file.name.toLowerCase().endsWith('.csv')){
+   const text=await file.text();
+   const lines=text.replace(/^\uFEFF/,'').split(/\r?\n/).filter(x=>x.trim());
+   const parseLine=line=>{let out=[],v='',q=false;for(let i=0;i<line.length;i++){const c=line[i];if(c==='"'&&line[i+1]==='"'&&q){v+='"';i++;}else if(c==='"'){q=!q;}else if(c===','&&!q){out.push(v);v='';}else v+=c;}out.push(v);return out;};
+   rows=lines.map(parseLine);
+  }else{
+   if(!window.XLSX) throw new Error('Excel 解析组件加载失败，请检查网络后刷新网页重试。');
+   const data=await file.arrayBuffer(), wb=XLSX.read(data,{type:'array'});
+   const sheet=wb.Sheets[wb.SheetNames[0]];
+   rows=XLSX.utils.sheet_to_json(sheet,{header:1,defval:'',raw:false});
+  }
+  const nonempty=rows.filter(r=>r.some(c=>String(c??'').trim()!==''));
+  if(!nonempty.length) throw new Error('文件中没有读取到有效内容。');
+  const headerIndex=nonempty.findIndex(r=>r.filter(c=>String(c??'').trim()).length>=3);
+  const headers=(nonempty[headerIndex]||[]).map((v,i)=>String(v||('列'+(i+1))).trim());
+  const sample=nonempty.slice(headerIndex+1,headerIndex+4);
+  const keywords=['交易时间','交易类型','交易对方','商品','金额','收/支','支付方式','当前状态','备注'];
+  const detected=keywords.map(k=>{const i=headers.findIndex(h=>h.includes(k));return i>=0?k+'：第'+(i+1)+'列（'+headers[i]+'）':null;}).filter(Boolean);
+  box.innerHTML='<div style="background:#f5f8ff;border-radius:12px;padding:12px;margin-top:12px"><b style="font-size:13px">文件读取成功</b><p class="muted">文件名：'+escapeHtml(file.name)+'<br>有效行数（含表头）：'+nonempty.length+'<br>识别到的列数：'+headers.length+'</p><b style="font-size:13px">识别到的字段</b><p class="muted">'+(detected.length?detected.map(escapeHtml).join('<br>'):'暂未匹配常见微信账单字段，请检查下方表头。')+'</p><b style="font-size:13px">表头</b><p class="muted">'+headers.map(escapeHtml).join(' ｜ ')+'</p><b style="font-size:13px">前3行样例（仅显示在本机）</b><div style="overflow:auto"><table style="border-collapse:collapse;font-size:11px;white-space:nowrap">'+sample.map(row=>'<tr>'+row.map(v=>'<td style="border:1px solid #e3e8f1;padding:5px">'+escapeHtml(String(v))+'</td>').join('')+'</tr>').join('')+'</table></div></div>';
+  status.textContent='读取完成。当前仅做字段检查与预览，尚未写入账单数据库；文件内容未上传。';
+ }catch(e){status.textContent='读取失败：'+e.message;}
+}
+function escapeHtml(s){return s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 </script></body></html>
