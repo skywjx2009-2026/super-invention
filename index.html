@@ -145,6 +145,26 @@ body[data-theme="glass"] .section span{
  color:var(--text-strong);
 }
 
+
+/* Dialog theme tokens: semantic surface/foreground pairs, following shadcn's token approach. */
+:root{--dialog-surface:#fff;--dialog-content-surface:#f6f8fc;--dialog-text:#182230;--dialog-muted:#536078;--dialog-border:#e2e7ef;--dialog-control:#f1f3f7;--dialog-control-text:#344054;--dialog-chip:#f8fafc;--dialog-chip-text:#344054;--dialog-selected:#eaf2ff;--dialog-selected-text:#245fc7}
+body[data-theme="dark"]{--dialog-surface:#1c2636;--dialog-content-surface:#202c3e;--dialog-text:#edf2fa;--dialog-muted:#b5c0d0;--dialog-border:#40516a;--dialog-control:#344154;--dialog-control-text:#edf2fa;--dialog-chip:#2a3850;--dialog-chip-text:#dce6f5;--dialog-selected:#304563;--dialog-selected-text:#c6dcff}
+body[data-theme="glass"]{--dialog-surface:rgba(255,255,255,.76);--dialog-content-surface:rgba(255,255,255,.48);--dialog-text:#18263b;--dialog-muted:#53657d;--dialog-border:rgba(91,116,150,.25);--dialog-control:rgba(255,255,255,.58);--dialog-control-text:#18263b;--dialog-chip:rgba(255,255,255,.42);--dialog-chip-text:#344b66;--dialog-selected:rgba(105,157,220,.25);--dialog-selected-text:#245b91}
+#billDetailModal>div{background:var(--dialog-surface)!important;color:var(--dialog-text)!important;border:1px solid var(--dialog-border);box-shadow:0 18px 50px rgba(0,0,0,.18)}
+#billDetailModal>div>div:first-child>b{color:var(--dialog-text)!important}
+#billDetailModal>div>div:first-child>button{background:var(--dialog-control)!important;color:var(--dialog-control-text)!important;-webkit-text-fill-color:var(--dialog-control-text)!important;border:1px solid var(--dialog-border)!important}
+#billDetailContent{color:var(--dialog-text)!important}
+#billDetailContent>div:first-child{background:var(--dialog-content-surface)!important;border:1px solid var(--dialog-border);color:var(--dialog-text)!important}
+#billDetailContent>div:first-child>div:first-child{color:var(--dialog-text)!important}
+#billDetailContent .muted,#billDetailContent p,#billDetailContent label{color:var(--dialog-muted)!important}
+#billDetailContent>div:first-child .muted{color:var(--dialog-muted)!important}
+#billDetailContent>div:first-child>div:last-child{color:var(--dialog-text)!important}
+#billDetailContent [data-category-tag],#billDetailContent [data-owner-tag]{background:var(--dialog-chip)!important;color:var(--dialog-chip-text)!important;border-color:var(--dialog-border)!important}
+#billDetailContent [data-category-tag][aria-pressed="true"],#billDetailContent [data-owner-tag][aria-pressed="true"]{background:var(--dialog-selected)!important;color:var(--dialog-selected-text)!important;border-color:var(--dialog-selected-text)!important}
+#billDetailContent input:not([type="hidden"]),#billDetailContent select{background:var(--dialog-control)!important;color:var(--dialog-control-text)!important;border:1px solid var(--dialog-border)!important}
+#billDetailContent button:not([data-category-tag]):not([data-owner-tag]){color:var(--dialog-control-text)}
+body[data-theme="glass"] #billDetailModal>div{backdrop-filter:blur(28px) saturate(175%);-webkit-backdrop-filter:blur(28px) saturate(175%)}
+
 </style></head>
 <body><main class="app">
 <header class="top"><h1>开支记账分析助手</h1><span class="tag">本机数据 · 原型版本</span></header>
@@ -484,8 +504,8 @@ window.openBillDetail=function(encodedId){
  const cats=[...(isIncome?INCOME_CATEGORIES:EXPENSE_CATEGORIES),'未分类'];
  if(isIncome&&!cats.includes(special))cats.push(special);
  const currentCategory=categoryOfV2(x),currentOwner=ownerOfV2(x);
- const categoryTags=cats.map(c=>{const red=isIncome&&c===special;return '<button type="button" data-category-tag="'+escapeHtml(c)+'" onclick="selectCategoryTagV2(this)" style="border:1px solid '+(currentCategory===c?(red?'#dc2626':'#3978f6'):(red?'#fecaca':'#e2e7ef'))+';background:'+(currentCategory===c?(red?'#fef2f2':'#edf4ff'):(red?'#fff7f7':'#fff'))+';color:'+(red?'#dc2626':currentCategory===c?'#245fc7':'#536078')+';border-radius:22px;padding:9px 15px;font-size:14px;font-weight:'+(currentCategory===c?'700':'500')+';cursor:pointer">'+(red?'🔴 ':'')+escapeHtml(c)+'</button>'}).join('');
- const owners=getGlobalSubcategories(),ownerTags=owners.map(o=>'<button type="button" data-owner-tag="'+escapeHtml(o)+'" onclick="selectOwnerTagV2(\''+String(o).replace(/\\/g,'\\\\').replace(/'/g,"\\'")+'\')" style="border:1px solid '+(currentOwner===o?'#3978f6':'#e2e7ef')+';background:'+(currentOwner===o?'#edf4ff':'#fff')+';color:'+(currentOwner===o?'#245fc7':'#536078')+';border-radius:22px;padding:9px 15px;font-size:14px;font-weight:'+(currentOwner===o?'700':'500')+';cursor:pointer">'+escapeHtml(o)+'</button>').join('');
+ const categoryTags=cats.map(c=>{const red=isIncome&&c===special;return '<button type="button" data-category-tag="'+escapeHtml(c)+'" aria-pressed="'+(currentCategory===c?'true':'false')+'" onclick="selectCategoryTagV2(this)" style="border:1px solid '+(currentCategory===c?(red?'#dc2626':'#3978f6'):(red?'#fecaca':'#e2e7ef'))+';background:'+(currentCategory===c?(red?'#fef2f2':'#edf4ff'):(red?'#fff7f7':'#fff'))+';color:'+(red?'#dc2626':currentCategory===c?'#245fc7':'#536078')+';border-radius:22px;padding:9px 15px;font-size:14px;font-weight:'+(currentCategory===c?'700':'500')+';cursor:pointer">'+(red?'🔴 ':'')+escapeHtml(c)+'</button>'}).join('');
+ const owners=getGlobalSubcategories(),ownerTags=owners.map(o=>'<button type="button" data-owner-tag="'+escapeHtml(o)+'" aria-pressed="'+(currentOwner===o?'true':'false')+'" onclick="selectOwnerTagV2(\''+String(o).replace(/\\/g,'\\\\').replace(/'/g,"\\'")+'\')" style="border:1px solid '+(currentOwner===o?'#3978f6':'#e2e7ef')+';background:'+(currentOwner===o?'#edf4ff':'#fff')+';color:'+(currentOwner===o?'#245fc7':'#536078')+';border-radius:22px;padding:9px 15px;font-size:14px;font-weight:'+(currentOwner===o?'700':'500')+';cursor:pointer">'+escapeHtml(o)+'</button>').join('');
  const candidates=getSavedBills().filter(v=>v.direction==='支出'&&v.id!==x.id&&(v.refundForId!==x.id)&&Number(v.amount)>(refundLinkedAmount(v.id)-(x.refundForId===v.id?Number(x.amount||0):0))).sort((a,b)=>String(b.time||'').localeCompare(String(a.time||'')));
  const selected=candidates.some(v=>v.id===x.refundForId)?x.refundForId:'';
  const refundOptions='<option value="">请选择需要冲抵的原始支出</option>'+candidates.map(v=>'<option value="'+escapeHtml(v.id)+'" '+(selected===v.id?'selected':'')+'>'+escapeHtml(v.time||'')+'｜'+escapeHtml(v.counterparty||v.product||'未填写对象')+'｜金额 '+money(v.amount)+'｜剩余可冲抵 '+money(Math.max(0,Number(v.amount)-refundLinkedAmount(v.id)+(x.refundForId===v.id?Number(x.amount||0):0)))+'</option>').join('');
@@ -533,7 +553,7 @@ window.selectCategoryTagV2=function(button){
  const modal=document.getElementById('billDetailModal');if(modal)modal.style.display='none';activeBillId=null;
  if(applyAll)alert('已将「'+merchant+'」的 '+(matches.length+1)+' 笔历史账单统一归类为「'+value+'」。');
 };
-window.selectOwnerTagV2=function(owner){const input=document.getElementById('detailOwnerSelect');if(!input)return;input.value=owner;document.querySelectorAll('[data-owner-tag]').forEach(b=>{const active=b.dataset.ownerTag===owner;b.style.borderColor=active?'#3978f6':'#e2e7ef';b.style.background=active?'#edf4ff':'#fff';b.style.color=active?'#245fc7':'#536078';b.style.fontWeight=active?'700':'500';});};
+window.selectOwnerTagV2=function(owner){const input=document.getElementById('detailOwnerSelect');if(!input)return;input.value=owner;document.querySelectorAll('[data-owner-tag]').forEach(b=>{const active=b.dataset.ownerTag===owner;b.setAttribute('aria-pressed',active?'true':'false');b.style.borderColor=active?'#3978f6':'#e2e7ef';b.style.background=active?'#edf4ff':'#fff';b.style.color=active?'#245fc7':'#536078';b.style.fontWeight=active?'700':'500';});};
 window.saveDetailClassificationV2=function(){
  if(!activeBillId)return;
  const category=document.getElementById('detailCategorySelect').value,bills=getSavedBills(),i=bills.findIndex(x=>x.id===activeBillId);
@@ -688,7 +708,8 @@ function manageSubcategoriesV3(){renderCategorySettingsV3();}
 
 window.selectCategoryTagV2=function(button){
  const value=button.dataset.categoryTag,input=document.getElementById('detailCategorySelect');if(!input)return;input.value=value;
- document.querySelectorAll('[data-category-tag]').forEach(b=>{const active=b.dataset.categoryTag===value,red=b.dataset.categoryTag==='冲销抵账';b.style.borderColor=active?(red?'#dc2626':'#3978f6'):(red?'#fecaca':'#e2e7ef');b.style.background=active?(red?'#fef2f2':'#edf4ff'):(red?'#fff7f7':'#fff');b.style.color=red?'#dc2626':active?'#245fc7':'#536078';b.style.fontWeight=active?'700':'500';});
+ document.querySelectorAll('[data-category-tag]').forEach(b=>{const active=b.dataset.categoryTag===value,red=b.dataset.categoryTag==='冲销抵账';
+   b.setAttribute('aria-pressed',active?'true':'false');b.style.borderColor=active?(red?'#dc2626':'#3978f6'):(red?'#fecaca':'#e2e7ef');b.style.background=active?(red?'#fef2f2':'#edf4ff'):(red?'#fff7f7':'#fff');b.style.color=red?'#dc2626':active?'#245fc7':'#536078';b.style.fontWeight=active?'700':'500';});
  const panel=document.getElementById('refundAssociationPanel');if(!panel)return;
  if(value!=='冲销抵账'){panel.style.display='none';return;}
  const bill=getSavedBills().find(x=>x.id===activeBillId);if(!bill)return;const candidates=getSavedBills().filter(v=>v.direction==='支出'&&v.id!==activeBillId&&Number(v.amount)>(refundLinkedAmount(v.id)-(bill.refundForId===v.id?Number(bill.amount||0):0))).sort((a,b)=>String(b.time||'').localeCompare(String(a.time||'')));
