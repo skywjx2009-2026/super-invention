@@ -58,6 +58,93 @@ body[data-theme="glass"] select,
 body[data-theme="glass"] textarea{background:rgba(255,255,255,.52)!important;color:var(--text)!important;border-color:rgba(91,116,150,.25)!important}
 body[data-theme="glass"] button{color:var(--text)}
 body[data-theme="glass"] .hero{border:1px solid rgba(255,255,255,.38);box-shadow:0 12px 30px rgba(76,112,160,.16)}
+
+/* Theme contrast pass: keep BI trend rows readable in light, dark and glass themes */
+:root{
+ --surface-raised:#ffffff;
+ --surface-soft:#f5f7fb;
+ --surface-selected:#eaf2ff;
+ --text-strong:#182230;
+ --text-secondary:#657084;
+ --text-selected:#245fc7;
+ --divider:#edf0f5;
+}
+body[data-theme="dark"]{
+ --surface-raised:#1c2636;
+ --surface-soft:#202c3e;
+ --surface-selected:#304563;
+ --text-strong:#edf2fa;
+ --text-secondary:#b5c0d0;
+ --text-selected:#b8d2ff;
+ --divider:#40516a;
+}
+body[data-theme="glass"]{
+ --surface-raised:rgba(255,255,255,.56);
+ --surface-soft:rgba(255,255,255,.34);
+ --surface-selected:rgba(105,157,220,.24);
+ --text-strong:#18263b;
+ --text-secondary:#53657d;
+ --text-selected:#245b91;
+ --divider:rgba(91,116,150,.24);
+}
+/* Monthly income/expense rows: explicitly style both labels and amounts.
+   Inline colors/backgrounds from the original markup must not override theme contrast. */
+#biTrend [data-bi-month]{
+ color:var(--text-strong)!important;
+ background:var(--surface-soft)!important;
+ border-bottom:1px solid var(--divider)!important;
+}
+#biTrend [data-bi-month][aria-pressed="true"]{
+ color:var(--text-strong)!important;
+ background:var(--surface-selected)!important;
+}
+#biTrend [data-bi-month] .catrow,
+#biTrend [data-bi-month] .catrow b,
+#biTrend [data-bi-month] .catrow span{
+ color:var(--text-strong)!important;
+}
+#biTrend [data-bi-month][aria-pressed="true"] .catrow b{
+ color:var(--text-selected)!important;
+}
+#biTrend [data-bi-month] .catrow span{
+ opacity:1!important;
+}
+body[data-theme="dark"] #biTrend [data-bi-month] .catrow span{
+ color:var(--text-secondary)!important;
+}
+/* Theme-aware surfaces and text for cards, inline white buttons and form controls. */
+body[data-theme="dark"] .card,
+body[data-theme="dark"] .stat{
+ color:var(--text-strong);
+}
+body[data-theme="dark"] .card button[style*="background:white"],
+body[data-theme="dark"] .card button[style*="background: white"]{
+ background:var(--surface-soft)!important;
+ color:var(--text-strong)!important;
+}
+body[data-theme="glass"] .card button[style*="background:white"],
+body[data-theme="glass"] .card button[style*="background: white"]{
+ background:rgba(255,255,255,.30)!important;
+ color:var(--text-strong)!important;
+ border-color:var(--divider);
+}
+body[data-theme="dark"] .card button,
+body[data-theme="glass"] .card button{
+ color:var(--text-strong);
+}
+body[data-theme="dark"] .card small,
+body[data-theme="dark"] .card .muted,
+body[data-theme="glass"] .card small,
+body[data-theme="glass"] .card .muted{
+ color:var(--text-secondary);
+}
+body[data-theme="dark"] .section h2,
+body[data-theme="dark"] .section span,
+body[data-theme="glass"] .section h2,
+body[data-theme="glass"] .section span{
+ color:var(--text-strong);
+}
+
 </style></head>
 <body><main class="app">
 <header class="top"><h1>开支记账分析助手</h1><span class="tag">本机数据 · 原型版本</span></header>
