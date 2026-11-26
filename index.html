@@ -38,16 +38,14 @@
 </section>
 <section id="analysis" class="page">
 <div class="section"><h2>BI 数据分析</h2><span>基于本机已导入账单</span></div>
-<details class="card bi-filter-panel"><summary>筛选条件 <span>按需展开 / 收起　⌄</span></summary><div class="bi-filter-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px">
-<label class="muted">年份<select id="biYear" onchange="renderAnalysis()" style="display:block;width:100%;padding:9px;border:1px solid var(--line);border-radius:8px;margin-top:5px"><option value="">全部年份</option></select></label>
-<label class="muted">月份<select id="biMonth" onchange="renderAnalysis()" style="display:block;width:100%;padding:9px;border:1px solid var(--line);border-radius:8px;margin-top:5px"><option value="">全部月份</option><option value="01">1月</option><option value="02">2月</option><option value="03">3月</option><option value="04">4月</option><option value="05">5月</option><option value="06">6月</option><option value="07">7月</option><option value="08">8月</option><option value="09">9月</option><option value="10">10月</option><option value="11">11月</option><option value="12">12月</option></select></label>
-<label class="muted">收支类型<select id="biDirection" onchange="renderAnalysis()" style="display:block;width:100%;padding:9px;border:1px solid var(--line);border-radius:8px;margin-top:5px"><option value="">全部</option><option>支出</option><option>收入</option></select></label>
+<div class="card" style="padding:13px 12px;margin-bottom:10px"><div class="muted" style="font-size:13px;margin-bottom:8px">年份</div><div id="biYearTags" style="display:flex;gap:7px;overflow-x:auto;padding-bottom:5px"></div><div class="muted" style="font-size:13px;margin:10px 0 8px">月份</div><div id="biMonthTags" style="display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:7px"></div><select id="biYear" style="display:none"><option value="">全部年份</option></select><select id="biMonth" style="display:none"><option value="">全部月份</option><option value="01">1月</option><option value="02">2月</option><option value="03">3月</option><option value="04">4月</option><option value="05">5月</option><option value="06">6月</option><option value="07">7月</option><option value="08">8月</option><option value="09">9月</option><option value="10">10月</option><option value="11">11月</option><option value="12">12月</option></select></div>
+<details class="card bi-filter-panel"><summary>其他筛选条件 <span>按需展开 / 收起　⌄</span></summary><div class="bi-filter-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px">
 <label class="muted">一级分类<select id="biCategory" onchange="renderAnalysis()" style="display:block;width:100%;padding:9px;border:1px solid var(--line);border-radius:8px;margin-top:5px"><option value="">全部分类</option></select></label>
+<label class="muted">收支类型<select id="biDirection" onchange="renderAnalysis()" style="display:block;width:100%;padding:9px;border:1px solid var(--line);border-radius:8px;margin-top:5px"><option value="">全部</option><option>支出</option><option>收入</option></select></label>
 <label class="muted">最低金额<input id="biMin" type="number" min="0" placeholder="不限" oninput="renderAnalysis()" style="display:block;width:100%;padding:9px;border:1px solid var(--line);border-radius:8px;margin-top:5px"></label>
 <label class="muted">最高金额<input id="biMax" type="number" min="0" placeholder="不限" oninput="renderAnalysis()" style="display:block;width:100%;padding:9px;border:1px solid var(--line);border-radius:8px;margin-top:5px"></label>
 <label class="muted" style="grid-column:1/-1">交易对象关键词<input id="biKeyword" type="search" placeholder="输入交易对象或商品关键词" oninput="renderAnalysis()" style="display:block;width:100%;padding:9px;border:1px solid var(--line);border-radius:8px;margin-top:5px"></label>
-<button onclick="resetAnalysisFilters()" style="grid-column:1/-1;border:0;background:#eef3ff;color:#3978f6;padding:10px;border-radius:9px">清空筛选条件</button>
-</div></details>
+<button onclick="resetAnalysisFilters()" style="grid-column:1/-1;border:0;background:#eef3ff;color:#3978f6;padding:10px;border-radius:9px">清空筛选条件</button></div></details>
 <div class="stats"><div class="stat"><small>总收入</small><b id="biIncome">¥0.00</b></div><div class="stat"><small>总支出</small><b id="biExpense">¥0.00</b></div><div class="stat"><small>结余</small><b id="biBalance">¥0.00</b></div></div>
 <div class="stats"><div class="stat"><small>有交易日均支出</small><b id="biDaily">¥0.00</b></div><div class="stat"><small>交易笔数</small><b id="biCount">0</b></div><div class="stat"><small>最大单笔支出</small><b id="biMaxExpense">¥0.00</b></div></div>
 <div class="section"><h2>月度收支趋势</h2><span>按筛选结果统计</span></div><div class="card" id="biTrend"><p class="muted">暂无数据</p></div>
@@ -270,7 +268,10 @@ document.addEventListener('click',function(e){const cat=e.target.closest('[data-
 
 function money(v){return '¥'+Number(v||0).toLocaleString('zh-CN',{minimumFractionDigits:2,maximumFractionDigits:2})}
 function dateParts(t){const m=String(t||'').trim().match(/^(\d{4})[-/年](\d{1,2})/);return m?{year:m[1],month:String(m[2]).padStart(2,'0'),key:m[1]+'-'+String(m[2]).padStart(2,'0')}:null}
-function resetAnalysisFilters(){['biYear','biMonth','biDirection','biCategory','biMin','biMax','biKeyword'].forEach(id=>{const e=document.getElementById(id);if(e)e.value=''});renderAnalysis()}
+function resetAnalysisFilters(){['biYear','biMonth','biDirection','biCategory','biMin','biMax','biKeyword','biOwner'].forEach(id=>{const e=document.getElementById(id);if(e)e.value=''});renderAnalysis()}
+function setBiYearTag(year){const y=document.getElementById('biYear'),m=document.getElementById('biMonth');if(!y)return;const off=y.value===String(year);y.value=off?'':String(year);if(off&&m)m.value='';renderAnalysis()}
+function setBiMonthTag(month){const y=document.getElementById('biYear'),m=document.getElementById('biMonth');if(!m)return;if(!y||!y.value){alert('请先选择年份，再选择月份。未选择年份和月份时，默认显示所有年份、所有月份的账单。');return;}const v=String(month).padStart(2,'0');m.value=m.value===v?'':v;renderAnalysis()}
+document.addEventListener('click',function(e){const y=e.target.closest('[data-bi-year-pick]');if(y){setBiYearTag(y.dataset.biYearPick);return;}const m=e.target.closest('[data-bi-month-pick]');if(m){setBiMonthTag(m.dataset.biMonthPick);}});
 function showAnalysisDrilldown(title,rows){
  const box=document.getElementById('homeCategoryRows');
  document.getElementById('homeCategoryTitle').textContent=title+' · '+rows.length+'笔';
@@ -285,6 +286,9 @@ function renderAnalysis(){
  if(yearEl.dataset.yearOptions!==yearOptions){yearEl.innerHTML=yearOptions;yearEl.dataset.yearOptions=yearOptions;}
  if(selectedYear&&years.includes(selectedYear))yearEl.value=selectedYear;else if(!selectedYear)yearEl.value='';
  yearEl.disabled=years.length===0;yearEl.title=years.length?'选择账单交易年份':'尚未识别到有效交易年份';
+  const yearTags=document.getElementById('biYearTags'),monthTags=document.getElementById('biMonthTags'),tagStyle='width:100%;border:1px solid var(--line);border-radius:18px;padding:7px 5px;font-size:13px;background:white;color:var(--text);';
+  if(yearTags)yearTags.innerHTML=years.map(y=>'<button type="button" data-bi-year-pick="'+y+'" aria-pressed="'+(yearEl.value===y?'true':'false')+'" style="'+tagStyle+(yearEl.value===y?'background:#eaf2ff;border-color:#3978f6;color:#245fc7;font-weight:700;':'')+'">'+y+'年</button>').join('')||'<span class="muted">暂无年份数据</span>';
+  const monthEl=document.getElementById('biMonth');if(monthTags)monthTags.innerHTML=Array.from({length:12},(_,i)=>{const mm=String(i+1).padStart(2,'0'),active=monthEl&&monthEl.value===mm;return '<button type="button" data-bi-month-pick="'+mm+'" aria-pressed="'+(active?'true':'false')+'" style="'+tagStyle+(active?'background:#eaf2ff;border-color:#3978f6;color:#245fc7;font-weight:700;':'')+'">'+(i+1)+'月</button>';}).join('');
  const cats=categoryNames().filter(c=>c!=='未分类'),oldCat=catEl.value;
  catEl.innerHTML='<option value="">全部分类</option>'+cats.map(c=>'<option value="'+escapeHtml(c)+'">'+escapeHtml(c)+'</option>').join('');if(cats.includes(oldCat))catEl.value=oldCat;
  const y=yearEl.value,mo=document.getElementById('biMonth').value,dir=document.getElementById('biDirection').value,cat=catEl.value;
