@@ -217,6 +217,7 @@ function renderAnalysis(){
  const y=yearEl.value,mo=document.getElementById('biMonth').value,dir=document.getElementById('biDirection').value,cat=catEl.value;
  const min=document.getElementById('biMin').value,max=document.getElementById('biMax').value,kw=document.getElementById('biKeyword').value.trim().toLowerCase();
  const data=all.filter(x=>{const d=dateParts(x.time),txt=[x.counterparty,x.product,x.remark].join(' ').toLowerCase();return (!y||(d&&d.year===y))&&(!mo||(d&&d.month===mo))&&(!dir||x.direction===dir)&&(!cat||x.category===cat)&&(min===''||Number(x.amount)>=Number(min))&&(max===''||Number(x.amount)<=Number(max))&&(!kw||txt.includes(kw));});
+ window.analysisFilteredBills=data;
  const income=data.filter(x=>x.direction==='收入').reduce((a,x)=>a+Number(x.amount||0),0),expense=data.filter(x=>x.direction==='支出').reduce((a,x)=>a+Number(x.amount||0),0),days=new Set(data.map(x=>String(x.time||'').slice(0,10)).filter(Boolean)).size||1;
  const set=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v};
  set('biIncome',money(income));set('biExpense',money(expense));set('biBalance',money(income-expense));set('biDaily',money(expense/days));set('biCount',data.length);set('biMaxExpense',money(Math.max(0,...data.filter(x=>x.direction==='支出').map(x=>Number(x.amount||0)))));
@@ -233,7 +234,7 @@ function renderAnalysis(){
 }
 document.addEventListener('click',function(e){
  const month=e.target.closest('[data-bi-month]');if(month){const key=month.dataset.biMonth,parts=key.split('-');const year=document.getElementById('biYear'),monthFilter=document.getElementById('biMonth');const isActive=year&&monthFilter&&year.value===parts[0]&&monthFilter.value===parts[1];if(year)year.value=isActive?'':parts[0];if(monthFilter)monthFilter.value=isActive?'':parts[1];renderAnalysis();return;}
- const category=e.target.closest('[data-bi-category]');if(category){const name=decodeURIComponent(category.dataset.biCategory),rows=(window.analysisFilteredBills||[]).filter(x=>x.direction==='支出'&&(name==='未分类'?(!x.category||x.category==='未分类'):x.category===name));showAnalysisDrilldown(name+' 支出明细',rows);}
+ const category=e.target.closest('[data-bi-category]');if(category){const name=decodeURIComponent(category.dataset.biCategory),rows=(window.analysisFilteredBills||[]).filter(x=>x.direction==='支出'&&(name==='未分类'?categoryOfV2(x)==='未分类':categoryOfV2(x)===name));showAnalysisDrilldown(name+' 支出明细',rows);}
 });
 loadCategoryConfig();renderHome();
 
