@@ -170,7 +170,7 @@ function confirmImport(){
  renderHome();document.getElementById('importStatus').textContent='导入完成：新增 '+added.length+' 笔，重复跳过 '+(p.dataRows.length-added.length)+' 行。本机累计保存 '+merged.length+' 笔。';
  document.getElementById('importPreview').insertAdjacentHTML('beforeend','<p class="muted">已保存到当前浏览器本机。换设备或清除浏览器数据可能导致数据无法继续访问，请后续使用备份功能。</p>');
  renderBills();
- try{const history=readImportHistory();history.push({importedAt:new Date().toLocaleString('zh-CN',{hour12:false}),fileName:p.fileName||'未命名文件',sourceRows:p.dataRows.length,added:added.length,skipped:p.dataRows.length-added.length,totalAfter:merged.length});saveImportHistory(history);}catch(e){console.warn('导入历史记录保存失败',e);}
+ try{const history=readImportHistory();history.push({createdAt:new Date().toISOString(),importedAt:new Date().toLocaleString('zh-CN',{hour12:false}),fileName:p.fileName||'未命名文件',sourceRows:p.dataRows.length,added:added.length,skipped:p.dataRows.length-added.length,totalAfter:merged.length});saveImportHistory(history);}catch(e){console.warn('导入历史记录保存失败',e);}
  alert('导入完成，新增 '+added.length+' 笔账单。');
 }
 const EXPENSE_CATEGORIES=['餐饮','交通出行','居家生活','购物','医疗健康','娱乐','教育','通讯数码','人情往来','其他'];
@@ -593,7 +593,7 @@ function restoreAppBackup(mergeBills){
  const pending=window.pendingRestoreBackup;if(!pending)return alert('请先选择并校验备份文件。');
  const backup=pending.payload.data,current=appBackupData();
  const backupBills=JSON.parse(backup[WECHAT_STORE_KEY]||'[]'),currentBills=getSavedBills();
- let next={...backup};
+ let next=mergeBills?{...current,...backup}:{...backup};
  if(mergeBills){
   const ids=new Set(currentBills.map(x=>String(x.id))),merged=currentBills.concat(backupBills.filter(x=>!ids.has(String(x.id))));
   next[WECHAT_STORE_KEY]=JSON.stringify(merged);
