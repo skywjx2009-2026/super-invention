@@ -32,7 +32,7 @@
 <div class="section"><h2>支出分类汇总</h2><span>笔数 · 净支出金额</span></div><div class="card" id="expenseCategorySummary"><p class="muted">暂无数据</p></div>
 <div class="section"><h2>收入分类汇总</h2><span>笔数 · 收入金额</span></div><div class="card" id="incomeCategorySummary"><p class="muted">暂无数据</p></div>
 
-<div class="section"><h2>全部账单明细</h2><span>当前筛选结果</span></div><div class="card"><div id="billList"><div class="empty">尚未导入真实账单。</div></div></div>
+<div class="section"><h2>全部账单明细</h2><span>当前筛选结果</span></div><div id="billCategoryFilterNotice" style="display:none;margin:0 0 10px;padding:11px 13px;background:#edf4ff;color:#245fc7;border-radius:11px;font-size:13px"></div><div class="card"><div id="billList"><div class="empty">尚未导入真实账单。</div></div></div>
 </section>
 <section id="analysis" class="page">
 <div class="section"><h2>BI 数据分析</h2><span>基于本机已导入账单</span></div>
@@ -485,5 +485,57 @@ window.unlinkRefundOffsetBill=function(encoded){
  const id=decodeURIComponent(encoded),bills=getSavedBills(),bill=bills.find(x=>x.id===id);if(!bill||!bill.refundForId)return;
  if(!confirm('确定解除这笔退款与原始支出的关联吗？\n\n退款记录会保留在「冲销抵账」分类中，并转为待关联状态；不会删除账单，也不会计入普通收入。'))return;
  delete bill.refundForId;delete bill.refundLinkStatus;localStorage.setItem(WECHAT_STORE_KEY,JSON.stringify(bills));rememberCategoryUsage(bills);renderBills();renderCategorySummary();renderHome();renderAnalysis();renderRefundOffsetManager();
+};
+
+/* 账单分类联动：分类汇总作为筛选入口，结果显示在下方统一账单明细中。 */
+window.billSelectedCategory=null;
+window.showCategoryDetails=function(encodedCategory,direction){
+ const category=decodeURIComponent(encodedCategory);
+ window.billSelectedCategory={category,direction};
+ window.renderBills();
+ const list=document.getElementById('billList');
+ if(list){const section=list.closest('.card');if(section)setTimeout(()=>section.scrollIntoView({behavior:'smooth',block:'start'}),60);}
+};
+window.clearBillCategoryFilter=function(){window.billSelectedCategory=null;window.renderBills();};
+window.renderCategorySummary=function(){
+ loadCategoryConfig();refreshCategoryNameEditors();
+ const b=window.billCategoryBaseRows||window.billFilteredRows||getSavedBills();
+ const pending=b.filter(x=>!categoryOfV2(x)||categoryOfV2(x)==='未分类').length;
+ const set=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v;};
+ set('catTotal',b.length);set('catDone',b.length-pending);set('catPending',pending);
+ const build=(cats,dir,includePending)=>{
+  const names=[...cats];
+  const rows=names.map(c=>{
+   const a=b.filter(x=>x.direction===dir&&categoryOfV2(x)===c&&!(dir==='收入'&&isOffsetIncome(x)));
+   return {c,n:a.length,sum:a.reduce((v,x)=>v+(dir==='支出'?expenseNetAmount(x):effectiveIncomeAmount(x)),0)};
+  }).filter(x=>x.n);
+  if(includePending){const a=b.filter(x=>x.direction===dir&&(!categoryOfV2(x)||categoryOfV2(x)==='未分类'));if(a.length)rows.push({c:'未分类',n:a.length,sum:a.reduce((v,x)=>v+(dir==='支出'?expenseNetAmount(x):effectiveIncomeAmount(x)),0)});}
+  return rows.length?rows.map(x=>'<button type="button" onclick="showCategoryDetails(\''+encodeURIComponent(x.c)+'\',\''+dir+'\')" style="width:100%;border:0;background:white;text-align:left;padding:11px 0;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:8px;font-size:13px"><span>'+escapeHtml(x.c)+'（'+x.n+'笔） · 查看明细 ›</span><b style="white-space:nowrap">¥'+x.sum.toFixed(2)+'</b></button>').join(''):'<p class="muted">暂无账单</p>';
+ };
+ const e=document.getElementById('expenseCategorySummary'),i=document.getElementById('incomeCategorySummary');
+ if(e)e.innerHTML=build(EXPENSE_CATEGORIES,'支出',true);
+ if(i)i.innerHTML=build(INCOME_CATEGORIES.filter(x=>x!=='冲销抵账'),'收入',false);
+};
+window.renderBills=function(){
+ const list=document.getElementById('billList');if(!list)return;
+ const b=getSavedBills().slice().sort((a,z)=>String(z.time||'').localeCompare(String(a.time||'')));
+ const q=(document.getElementById('billSearch')?.value||'').trim().toLowerCase();
+ const yearEl=document.getElementById('billYear'),monthEl=document.getElementById('billMonth');
+ const years=[...new Set(b.map(x=>dateParts(x.time)?.year).filter(Boolean))].sort((a,z)=>z.localeCompare(a));
+ const oldYear=yearEl?.value||'';
+ if(yearEl){yearEl.innerHTML='<option value="">全部年份</option>'+years.map(y=>'<option value="'+y+'">'+y+'年</option>').join('');if(years.includes(oldYear))yearEl.value=oldYear;}
+ const y=yearEl?.value||'',mth=monthEl?.value||'';
+ const base=b.filter(x=>{const d=dateParts(x.time),txt=[x.counterparty,x.product,x.remark,x.category,ownerOfV2(x)].join(' ').toLowerCase();return (!q||txt.includes(q))&&(!y||(d&&d.year===y))&&(!mth||(d&&d.month===mth));});
+ window.billCategoryBaseRows=base;window.billFilteredRows=base;
+ const selected=window.billSelectedCategory;
+ const f=selected?base.filter(x=>x.direction===selected.direction&&(selected.category==='未分类'?(!categoryOfV2(x)||categoryOfV2(x)==='未分类'):categoryOfV2(x)===selected.category)):base;
+ const notice=document.getElementById('billCategoryFilterNotice');
+ if(notice){if(selected){notice.style.display='block';notice.innerHTML='当前查看：<b>'+(selected.direction==='支出'?'支出':'收入')+' · '+escapeHtml(selected.category)+'</b>（'+f.length+'笔） <button type="button" onclick="clearBillCategoryFilter()" style="float:right;border:0;border-radius:7px;background:#fff;color:#245fc7;padding:5px 9px">清除筛选</button><div style="clear:both"></div>';}else{notice.style.display='none';notice.innerHTML='';}}
+ renderCategorySummary();
+ const count=document.getElementById('billCount');if(count)count.textContent='本机已保存 '+b.length+' 笔 · 当前显示 '+f.length+' 笔'+(selected?'（分类筛选）':'');
+ list.innerHTML=f.slice(0,150).map(x=>{
+  const un=!categoryOfV2(x)||categoryOfV2(x)==='未分类',op=ownerOfV2(x)==='未指定';
+  return '<button type="button" data-bill-detail-id="'+encodeURIComponent(x.id)+'" onclick="openBillDetail(decodeURIComponent(this.dataset.billDetailId))" style="width:100%;text-align:left;background:white;border:0;border-bottom:1px solid var(--line);padding:12px 0;display:flex;align-items:center;gap:10px"><span class="icon">'+(x.direction==='收入'?'💰':'🧾')+'</span><span class="txmain" style="min-width:0"><b>'+escapeHtml(x.counterparty||x.product||'未填写交易对象')+'</b><small>'+escapeHtml(x.time||'')+' · '+(un?'<span class="pending-badge">未分类</span>':escapeHtml(categoryOfV2(x)))+' · '+(op?'<span class="owner-pending">未指定归属</span>':escapeHtml(ownerOfV2(x)))+'</small></span><span style="text-align:right;white-space:nowrap"><b class="money '+(x.direction==='收入'?'income':'')+'">'+(x.direction==='支出'?'-':'+')+money(x.amount)+'</b><small style="display:block;color:var(--muted);margin-top:4px">查看详情 ›</small></span></button>';
+ }).join('')||(b.length?'<div class="empty">没有符合当前筛选条件的账单。</div>':'<div class="empty">尚未导入真实账单。请前往「我的」导入微信账单。</div>');
 };
 </script></body></html>
