@@ -874,4 +874,45 @@ function restoreAppBackup(mergeBills){
 })();
 </script>
 
+
+/* 分类管理读取修复：合并两套历史配置，避免 V3 旧快照覆盖账单端新增的一级分类。 */
+(function(){
+ const legacyKey='expense_assistant_category_config_v1';
+ const settingsKey='expense_assistant_category_settings_v3';
+ const billsKey=WECHAT_STORE_KEY;
+ const uniqueNames=arr=>[...new Set((arr||[]).map(x=>String(x||'').trim()).filter(x=>x&&x!=='未分类'))];
+ const originalData=categorySettingsDataV3;
+ categorySettingsDataV3=function(){
+  let legacy={},settings={},bills=[];
+  try{legacy=JSON.parse(localStorage.getItem(legacyKey)||'{}')||{};}catch(e){}
+  try{settings=JSON.parse(localStorage.getItem(settingsKey)||'{}')||{};}catch(e){}
+  try{bills=JSON.parse(localStorage.getItem(billsKey)||'[]')||[];}catch(e){}
+  const expense=uniqueNames([...(Array.isArray(settings.expense)?settings.expense:[]),...(Array.isArray(legacy.expense)?legacy.expense:[]),...bills.filter(x=>x&&x.direction==='支出').map(x=>x.category)]);
+  const income=uniqueNames([...(Array.isArray(settings.income)?settings.income:[]),...(Array.isArray(legacy.income)?legacy.income:[]),...bills.filter(x=>x&&x.direction==='收入').map(x=>x.category)]);
+  if(!income.includes('冲销抵账'))income.push('冲销抵账');
+  let subcategories=getGlobalSubcategories();
+  if(Array.isArray(settings.subcategories))subcategories=[...new Set([...subcategories,...settings.subcategories])];
+  else if(settings.subcategories&&typeof settings.subcategories==='object')subcategories=[...new Set([...subcategories,...Object.values(settings.subcategories).flat()])];
+  const d={expense,income,subcategories};
+  /* 每次打开分类管理时，把合并后的结果回写两处，形成一致配置。 */
+  EXPENSE_CATEGORIES.splice(0,EXPENSE_CATEGORIES.length,...expense);
+  INCOME_CATEGORIES.splice(0,INCOME_CATEGORIES.length,...income);
+  localStorage.setItem(legacyKey,JSON.stringify({expense,income,subcategories:SUBCATEGORIES}));
+  localStorage.setItem(settingsKey,JSON.stringify(d));
+  rememberCategoryUsage(bills);
+  return d;
+ };
+ const originalSave=saveCategorySettingsV3;
+ saveCategorySettingsV3=function(d){
+  const expense=uniqueNames(d.expense),income=uniqueNames(d.income);
+  if(!income.includes('冲销抵账'))income.push('冲销抵账');
+  const clean={expense,income,subcategories:d.subcategories||getGlobalSubcategories()};
+  EXPENSE_CATEGORIES.splice(0,EXPENSE_CATEGORIES.length,...clean.expense);
+  INCOME_CATEGORIES.splice(0,INCOME_CATEGORIES.length,...clean.income);
+  saveGlobalSubcategories(clean.subcategories);
+  localStorage.setItem(legacyKey,JSON.stringify({expense:clean.expense,income:clean.income,subcategories:SUBCATEGORIES}));
+  localStorage.setItem(settingsKey,JSON.stringify(clean));
+ };
+})();
+
 </body></html>
