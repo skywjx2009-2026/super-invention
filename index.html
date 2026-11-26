@@ -340,7 +340,14 @@ window.selectCategoryTagV2=function(button){
  document.querySelectorAll('[data-category-tag]').forEach(b=>{const active=b.dataset.categoryTag===value;b.style.borderColor=active?'#3978f6':'#e2e7ef';b.style.background=active?'#edf4ff':'#fff';b.style.color=active?'#245fc7':'#536078';b.style.fontWeight=active?'700':'500';});
  // 冲销抵账必须先选择原始支出，保留详情窗口供用户完成关联。
  if(bill.direction==='收入'&&value==='冲销抵账'){
-  const panel=document.getElementById('refundAssociationPanel');if(panel)panel.style.display='block';
+  const panel=document.getElementById('refundAssociationPanel');
+  if(panel){
+   const candidates=bills.filter(v=>v.direction==='支出'&&v.id!==bill.id&&Number(v.amount)>(refundLinkedAmount(v.id)-(bill.refundForId===v.id?Number(bill.amount||0):0))).sort((a,b)=>String(b.time||'').localeCompare(String(a.time||'')));
+   const selected=candidates.some(v=>v.id===bill.refundForId)?bill.refundForId:'';
+   const options='<option value="">请选择需要冲抵的原始支出</option>'+candidates.map(v=>'<option value="'+escapeHtml(v.id)+'" '+(selected===v.id?'selected':'')+'>'+escapeHtml(v.time||'')+'｜'+escapeHtml(v.counterparty||v.product||'未填写对象')+'｜金额 '+money(v.amount)+'｜剩余可冲抵 '+money(Math.max(0,Number(v.amount)-refundLinkedAmount(v.id)+(bill.refundForId===v.id?Number(bill.amount||0):0)))+'</option>').join('');
+   panel.style.display='block';panel.className='card';panel.style.cssText='display:block;margin-top:14px;padding:12px;border:1px solid #fecaca;background:#fffafa';
+   panel.innerHTML='<b style="color:#dc2626">🔴 关联需要冲抵的支出</b><p class="muted" style="margin:6px 0 9px">请选择这笔退款对应的原始付款。退款不会计入收入，而是从对应支出中扣除。</p><select id="detailRefundTarget" style="width:100%;padding:11px;border:1px solid #f3b4b4;border-radius:9px;background:white">'+options+'</select><button type="button" onclick="saveDetailClassificationV2()" style="width:100%;margin-top:10px;border:0;border-radius:9px;background:#dc2626;color:white;padding:12px">确认冲销关联</button>';
+  }
   return;
  }
  const merchant=String(bill.counterparty||'').trim();
