@@ -68,6 +68,43 @@ body[data-theme="dark"] .page [style*="background: #f7f9fc"]{background:#263244!
 body[data-theme="dark"] .page [style*="border-bottom:1px solid"]{border-bottom-color:#3b4759!important}
 body[data-theme="dark"] .page input::placeholder{color:#aab4c3}
 body[data-theme="dark"] .page .pending-badge,body[data-theme="dark"] .page .owner-pending{color:#ffd58a}
+/* 全局暗色模式二次校正：弹窗、账单详情、金额及操作按钮 */
+body[data-theme="dark"] [id*="Modal"]>div,
+body[data-theme="dark"] [id*="Modal"]>div *{color:#edf2f8}
+body[data-theme="dark"] [id*="Modal"]>div{background:#1e2938!important;border-color:#3b485b!important}
+body[data-theme="dark"] [id*="Modal"]>div [style*="background:white"],
+body[data-theme="dark"] [id*="Modal"]>div [style*="background: white"],
+body[data-theme="dark"] [id*="Modal"]>div [style*="background:#fff"],
+body[data-theme="dark"] [id*="Modal"]>div [style*="background: #fff"],
+body[data-theme="dark"] [id*="Modal"]>div [style*="background:#f"],
+body[data-theme="dark"] [id*="Modal"]>div [style*="background: #f"]{background:#29374a!important}
+body[data-theme="dark"] #billDetailModal button,
+body[data-theme="dark"] #billDetailModal button[style],
+body[data-theme="dark"] [id*="Modal"] button[onclick*="close"],
+body[data-theme="dark"] [id*="Modal"] button[onclick*="Close"]{background:#35445a!important;color:#f8fafc!important;border:1px solid #53647b!important}
+body[data-theme="dark"] #billDetailModal #billDetailContent,
+body[data-theme="dark"] #billDetailModal #billDetailContent *{color:#edf2f8}
+body[data-theme="dark"] #billDetailModal #billDetailContent>div:first-child{background:#29374a!important;border:1px solid #40516a!important}
+body[data-theme="dark"] #billDetailModal #billDetailContent>div:first-child>div:last-of-type{color:#ffffff!important;font-size:24px!important;font-weight:800!important}
+body[data-theme="dark"] #billDetailModal #billDetailContent .muted,
+body[data-theme="dark"] [id*="Modal"] .muted,
+body[data-theme="dark"] [id*="Modal"] small,
+body[data-theme="dark"] [id*="Modal"] label{color:#c0cad8!important}
+body[data-theme="dark"] #billDetailModal #billDetailContent select,
+body[data-theme="dark"] [id*="Modal"] select,
+body[data-theme="dark"] [id*="Modal"] input,
+body[data-theme="dark"] [id*="Modal"] textarea{background:#1b2737!important;color:#f8fafc!important;border-color:#53647b!important}
+body[data-theme="dark"] #billDetailModal #billDetailContent button[style*="#eef3ff"],
+body[data-theme="dark"] #billDetailModal #billDetailContent button[style*="#f3f5f8"]{background:#35445a!important;color:#f8fafc!important}
+body[data-theme="dark"] .money{color:#f3f6fb!important}
+body[data-theme="dark"] .money.income{color:#55d6a0!important}
+body[data-theme="dark"] .income{color:#55d6a0!important}
+body[data-theme="dark"] .expense{color:#ff8585!important}
+body[data-theme="dark"] .page b,
+body[data-theme="dark"] .page strong{color:inherit}
+body[data-theme="dark"] .page .muted,
+body[data-theme="dark"] .page small{color:#b8c4d3}
+
 </style></head>
 <body><main class="app">
 <header class="top"><h1>开支记账分析助手</h1><div class="appearance-switch" role="group" aria-label="页面外观"><button type="button" id="themeLightBtn" class="active" onclick="setAppTheme('light')">☀️ 亮色</button><button type="button" id="themeDarkBtn" onclick="setAppTheme('dark')">🌙 暗色</button></div></header>
