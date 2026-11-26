@@ -165,6 +165,153 @@ body[data-theme="glass"]{--dialog-surface:rgba(255,255,255,.76);--dialog-content
 #billDetailContent button:not([data-category-tag]):not([data-owner-tag]){color:var(--dialog-control-text)}
 body[data-theme="glass"] #billDetailModal>div{backdrop-filter:blur(28px) saturate(175%);-webkit-backdrop-filter:blur(28px) saturate(175%)}
 
+
+/* Global theme audit pass: normalize hard-coded light surfaces across every page and dynamically rendered row. */
+:root{
+ --app-surface:var(--card);
+ --app-surface-soft:#f5f7fb;
+ --app-surface-text:var(--text);
+ --app-surface-muted:var(--muted);
+ --app-surface-border:var(--line);
+ --app-control-bg:#fff;
+ --app-control-text:var(--text);
+ --app-selected-bg:#eaf2ff;
+ --app-selected-text:#245fc7;
+ --app-overlay:rgba(16,24,40,.55);
+}
+body[data-theme="dark"]{
+ --app-surface-soft:#202c3e;
+ --app-control-bg:#202c3e;
+ --app-control-text:#edf2fa;
+ --app-selected-bg:#304563;
+ --app-selected-text:#c6dcff;
+ --app-overlay:rgba(0,0,0,.68);
+}
+body[data-theme="glass"]{
+ --app-surface-soft:rgba(255,255,255,.34);
+ --app-control-bg:rgba(255,255,255,.48);
+ --app-control-text:#18263b;
+ --app-selected-bg:rgba(105,157,220,.25);
+ --app-selected-text:#245b91;
+ --app-overlay:rgba(35,52,75,.30);
+}
+body[data-theme="custom"]{
+ --app-surface-soft:color-mix(in srgb,var(--card) 72%,transparent);
+ --app-control-bg:color-mix(in srgb,var(--card) 82%,transparent);
+ --app-control-text:var(--text);
+ --app-selected-bg:color-mix(in srgb,var(--blue) 16%,var(--card));
+ --app-selected-text:var(--text);
+}
+body[data-theme="dark"] .app,
+body[data-theme="glass"] .app,
+body[data-theme="custom"] .app{color:var(--text)}
+body[data-theme="dark"] .card,
+body[data-theme="dark"] .stat,
+body[data-theme="dark"] .tabs,
+body[data-theme="dark"] .modal>div,
+body[data-theme="dark"] #importHistoryModal>div,
+body[data-theme="dark"] #backupRestoreModal>div,
+body[data-theme="dark"] #systemSettingsModal>div,
+body[data-theme="dark"] #categorySettingsModalV3>div,
+body[data-theme="dark"] #unifiedOffsetModal>div,
+body[data-theme="dark"] #refundOffsetManagerModal>div{
+ background:var(--card);
+ color:var(--text);
+ border-color:var(--line);
+}
+body[data-theme="glass"] .modal>div,
+body[data-theme="glass"] #unifiedOffsetModal>div,
+body[data-theme="glass"] #refundOffsetManagerModal>div{
+ background:rgba(255,255,255,.68)!important;
+ color:var(--text)!important;
+ border:1px solid rgba(255,255,255,.78)!important;
+ backdrop-filter:blur(24px) saturate(175%);
+ -webkit-backdrop-filter:blur(24px) saturate(175%);
+}
+body[data-theme="dark"] [style*="background:white"],
+body[data-theme="dark"] [style*="background: white"],
+body[data-theme="dark"] [style*="background:#fff"],
+body[data-theme="dark"] [style*="background: #fff"],
+body[data-theme="dark"] [style*="background:#f5f8ff"],
+body[data-theme="dark"] [style*="background:#f6f8fc"],
+body[data-theme="dark"] [style*="background:#f5f7fb"],
+body[data-theme="dark"] [style*="background:#f8fafc"],
+body[data-theme="dark"] [style*="background:#fffafa"]{
+ background:var(--app-surface-soft)!important;
+ color:var(--text)!important;
+ border-color:var(--line)!important;
+}
+body[data-theme="glass"] [style*="background:white"],
+body[data-theme="glass"] [style*="background: white"],
+body[data-theme="glass"] [style*="background:#fff"],
+body[data-theme="glass"] [style*="background: #fff"],
+body[data-theme="glass"] [style*="background:#f5f8ff"],
+body[data-theme="glass"] [style*="background:#f6f8fc"],
+body[data-theme="glass"] [style*="background:#f5f7fb"],
+body[data-theme="glass"] [style*="background:#f8fafc"]{
+ background:rgba(255,255,255,.36)!important;
+ color:var(--text)!important;
+ border-color:var(--app-surface-border)!important;
+ backdrop-filter:blur(14px) saturate(150%);
+ -webkit-backdrop-filter:blur(14px) saturate(150%);
+}
+body[data-theme="dark"] input,
+body[data-theme="dark"] select,
+body[data-theme="dark"] textarea,
+body[data-theme="glass"] input,
+body[data-theme="glass"] select,
+body[data-theme="glass"] textarea,
+body[data-theme="custom"] input,
+body[data-theme="custom"] select,
+body[data-theme="custom"] textarea{
+ color:var(--app-control-text)!important;
+ background:var(--app-control-bg)!important;
+ border-color:var(--app-surface-border)!important;
+}
+body[data-theme="dark"] input::placeholder,
+body[data-theme="dark"] textarea::placeholder{color:#aab8ca!important;opacity:1}
+body[data-theme="glass"] input::placeholder,
+body[data-theme="glass"] textarea::placeholder{color:#64748b!important;opacity:1}
+body[data-theme="dark"] .muted,
+body[data-theme="dark"] small,
+body[data-theme="dark"] .section span,
+body[data-theme="glass"] .muted,
+body[data-theme="glass"] small,
+body[data-theme="glass"] .section span{color:var(--muted)}
+body[data-theme="dark"] .tx,
+body[data-theme="dark"] [style*="border-bottom"],
+body[data-theme="glass"] .tx{border-bottom-color:var(--line)!important}
+body[data-theme="dark"] .tabs{background:rgba(23,33,49,.94)!important;border-top-color:var(--line)}
+body[data-theme="glass"] .tabs{background:rgba(255,255,255,.48)!important;border-top-color:rgba(255,255,255,.7)}
+body[data-theme="dark"] #billCategoryFilterNotice,
+body[data-theme="dark"] [data-bi-year-pick][aria-pressed="true"],
+body[data-theme="dark"] [data-bi-month-pick][aria-pressed="true"],
+body[data-theme="dark"] #homeYearTags button[aria-pressed="true"],
+body[data-theme="dark"] #homeMonthTags button[aria-pressed="true"]{
+ background:var(--app-selected-bg)!important;color:var(--app-selected-text)!important;border-color:#506b91!important
+}
+body[data-theme="glass"] #billCategoryFilterNotice,
+body[data-theme="glass"] [data-bi-year-pick][aria-pressed="true"],
+body[data-theme="glass"] [data-bi-month-pick][aria-pressed="true"],
+body[data-theme="glass"] #homeYearTags button[aria-pressed="true"],
+body[data-theme="glass"] #homeMonthTags button[aria-pressed="true"]{
+ background:var(--app-selected-bg)!important;color:var(--app-selected-text)!important;border-color:rgba(78,132,198,.48)!important
+}
+body[data-theme="dark"] #billDetailModal,
+body[data-theme="dark"] #importHistoryModal,
+body[data-theme="dark"] #backupRestoreModal,
+body[data-theme="dark"] #systemSettingsModal,
+body[data-theme="dark"] #categorySettingsModalV3,
+body[data-theme="dark"] #unifiedOffsetModal,
+body[data-theme="dark"] #refundOffsetManagerModal{background:var(--app-overlay)!important}
+body[data-theme="glass"] #billDetailModal,
+body[data-theme="glass"] #importHistoryModal,
+body[data-theme="glass"] #backupRestoreModal,
+body[data-theme="glass"] #systemSettingsModal,
+body[data-theme="glass"] #categorySettingsModalV3,
+body[data-theme="glass"] #unifiedOffsetModal,
+body[data-theme="glass"] #refundOffsetManagerModal{background:var(--app-overlay)!important}
+
 </style></head>
 <body><main class="app">
 <header class="top"><h1>开支记账分析助手</h1><span class="tag">本机数据 · 原型版本</span></header>
