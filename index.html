@@ -488,15 +488,9 @@ function saveCategorySettingsV3(d){
 }
 function openSystemSettings(){const m=document.getElementById('systemSettingsModal');if(m)m.style.display='flex';}
 function closeSystemSettings(){const m=document.getElementById('systemSettingsModal');if(m)m.style.display='none';}
-/* 外观主题系统已撤回：恢复应用原始默认配色，保留账单、分类及分析功能。 */
-function applyAppTheme(){document.body.removeAttribute('data-theme');document.body.style.removeProperty('--custom-bg-image');document.documentElement.style.removeProperty('--bg');try{localStorage.removeItem('expense_assistant_theme_v1')}catch(e){}}
-applyAppTheme();{const c=getAppThemeConfig(),theme=['light','dark','glass','custom'].includes(c.mode)?c.mode:'light';document.body.dataset.theme=theme;document.documentElement.style.setProperty('--bg',theme==='custom'?(c.color||'#eaf3ff'):'');document.body.style.setProperty('--custom-bg-image',c.image?'url("'+c.image+'")':'none');document.querySelectorAll('[data-theme-choice]').forEach(b=>b.classList.toggle('active',b.dataset.themeChoice===theme));const box=document.getElementById('customThemeOptions');if(box)box.style.display=theme==='custom'?'block':'none';const picker=document.getElementById('customThemeColor');if(picker&&c.color)picker.value=c.color;const meta=document.querySelector('meta[name="theme-color"]');if(meta)meta.content=theme==='dark'?'#101522':theme==='glass'?'#eaf0f8':theme==='custom'?(c.color||'#eaf3ff'):'#f5f7fb';}
-function setAppTheme(mode){const c=getAppThemeConfig();c.mode=mode;saveAppThemeConfig(c);applyAppTheme()}
-function setCustomThemeColor(color){const c=getAppThemeConfig();c.mode='custom';c.color=color;delete c.image;saveAppThemeConfig(c);applyAppTheme();const imageInput=document.getElementById('customThemeImage');if(imageInput)imageInput.value=''}
-function setCustomThemeImage(event){const file=event.target.files&&event.target.files[0];if(!file)return;if(!file.type.startsWith('image/'))return alert('请选择图片文件。');const reader=new FileReader();reader.onload=()=>{const img=new Image();img.onload=()=>{const max=1600,scale=Math.min(1,max/Math.max(img.width,img.height)),canvas=document.createElement('canvas');canvas.width=Math.round(img.width*scale);canvas.height=Math.round(img.height*scale);canvas.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);const data=canvas.toDataURL('image/jpeg',0.76);try{const c=getAppThemeConfig();c.mode='custom';c.image=data;saveAppThemeConfig(c);applyAppTheme()}catch(e){alert('图片保存失败，可能是图片过大或本机存储空间不足，请换一张较小的图片。')}};img.onerror=()=>alert('图片读取失败，请换一张图片。');img.src=reader.result};reader.readAsDataURL(file)}
-function clearCustomThemeImage(){const c=getAppThemeConfig();delete c.image;c.mode='custom';saveAppThemeConfig(c);applyAppTheme();const f=document.getElementById('customThemeImage');if(f)f.value=''}
-function openSystemSettings(){const m=document.getElementById('systemSettingsModal');if(m)m.style.display='flex';} function closeSystemSettings(){const m=document.getElementById('systemSettingsModal');if(m)m.style.display='none';}
-applyAppTheme();
+/* 系统设置保留原始占位页；外观主题功能暂未开放。 */
+function openSystemSettings(){const m=document.getElementById('systemSettingsModal');if(m)m.style.display='flex';}
+function closeSystemSettings(){const m=document.getElementById('systemSettingsModal');if(m)m.style.display='none';}
 function openCategorySettingsV3(){const m=document.getElementById('categorySettingsModalV3');if(m){m.style.display='flex';renderCategorySettingsV3();}}
 function closeCategorySettingsV3(){const m=document.getElementById('categorySettingsModalV3');if(m)m.style.display='none';refreshAfterCategoryChange();}
 function renderCategorySettingsV3(){
