@@ -249,35 +249,65 @@ function effectiveIncomeAmount(x){return x.direction==='收入'&&!isOffsetIncome
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
 function openBillFilePicker(){const input=document.getElementById('billFile');if(!input)return;input.value='';input.click();}
+const IMPORT_FIELD_ALIASES={
+ time:['交易时间','记录时间','发生时间','创建时间'],
+ type:['交易类型','业务类型'],
+ counterparty:['交易对方','对方名称','商户名称','收款方','付款方'],
+ product:['商品','商品名称'],
+ direction:['收/支','收支类型','收支方向','收支'],
+ amount:['金额(元)','金额（元）','金额'],
+ payment:['支付方式','付款方式'],
+ status:['当前状态','交易状态','状态'],
+ tradeNo:['交易单号','订单号','流水号'],
+ merchantNo:['商户单号','商户订单号'],
+ remark:['备注','说明'],
+ category:['分类','商品分类'],
+ account:['账户','资金账户'],
+ sourceDetail:['来源','账单来源'],
+ tag:['标签','标记']
+};
+function normalizeImportHeader(v){return String(v??'').replace(/[\\s\\u00a0]/g,'').replace(/[：:]/g,'').trim();}
+function detectImportColumns(headers){
+ const normalized=headers.map(normalizeImportHeader),map={};
+ Object.entries(IMPORT_FIELD_ALIASES).forEach(([key,aliases])=>{
+  const i=normalized.findIndex(h=>aliases.some(a=>normalizeImportHeader(a)===h));
+  if(i>=0)map[key]=i;
+ });
+ return map;
+}
 async function readBillFile(){
- const input=document.getElementById('billFile'), status=document.getElementById('importStatus'), box=document.getElementById('importPreview');
- const file=input.files&&input.files[0]; if(!file){status.textContent='请先选择账单文件。';return;}
+ const input=document.getElementById('billFile'),status=document.getElementById('importStatus'),box=document.getElementById('importPreview');
+ const file=input.files&&input.files[0];if(!file){status.textContent='请先选择账单文件。';return;}
  status.textContent='正在本机读取文件……';box.innerHTML='';
  try{
   let rows=[];
   if(file.name.toLowerCase().endsWith('.csv')){
    const text=await file.text();
-   const lines=text.replace(/^\uFEFF/,'').split(/\r?\n/).filter(x=>x.trim());
+   const lines=text.replace(/^\\uFEFF/,'').split(/\\r?\\n/).filter(x=>x.trim());
    const parseLine=line=>{let out=[],v='',q=false;for(let i=0;i<line.length;i++){const c=line[i];if(c==='"'&&line[i+1]==='"'&&q){v+='"';i++;}else if(c==='"'){q=!q;}else if(c===','&&!q){out.push(v);v='';}else v+=c;}out.push(v);return out;};
    rows=lines.map(parseLine);
   }else{
-   if(!window.XLSX) throw new Error('Excel 解析组件加载失败，请检查网络后刷新网页重试。');
-   const data=await file.arrayBuffer(), wb=XLSX.read(data,{type:'array'});
-   const sheet=wb.Sheets[wb.SheetNames[0]];
+   if(!window.XLSX)throw new Error('Excel 解析组件加载失败，请检查网络后刷新网页重试。');
+   const data=await file.arrayBuffer(),wb=XLSX.read(data,{type:'array'}),sheet=wb.Sheets[wb.SheetNames[0]];
    rows=XLSX.utils.sheet_to_json(sheet,{header:1,defval:'',raw:false});
   }
   const nonempty=rows.filter(r=>r.some(c=>String(c??'').trim()!==''));
-  if(!nonempty.length) throw new Error('文件中没有读取到有效内容。');
-  const headerIndex=nonempty.findIndex(r=>r.filter(c=>String(c??'').trim()).length>=3);
-  const headers=(nonempty[headerIndex]||[]).map((v,i)=>String(v||('列'+(i+1))).trim());
+  if(!nonempty.length)throw new Error('文件中没有读取到有效内容。');
+  let headerIndex=-1,headers=[],columns={};
+  for(let i=0;i<nonempty.length;i++){
+   const candidate=nonempty[i].map((v,j)=>String(v||('列'+(j+1))).trim());
+   const found=detectImportColumns(candidate);
+   if(found.time!==undefined&&found.amount!==undefined&&found.direction!==undefined){headerIndex=i;headers=candidate;columns=found;break;}
+  }
+  if(headerIndex<0)throw new Error('未找到有效账单表头。请确认文件包含「记录时间/交易时间、收支类型/收支、金额」等字段。');
   const dataRows=nonempty.slice(headerIndex+1).filter(r=>r.some(v=>String(v??'').trim()!==''));
-  window.pendingWechatRows={headers,dataRows,fileName:file.name};
+  const sourceType=columns.category!==undefined||columns.account!==undefined||columns.sourceDetail!==undefined?'支付宝/通用账单':'微信账单';
+  window.pendingWechatRows={headers,dataRows,fileName:file.name,columns,sourceType};
+  const labels=Object.entries(IMPORT_FIELD_ALIASES).map(([key,aliases])=>columns[key]!==undefined?({time:'时间',type:'交易类型',counterparty:'交易对方',product:'商品',direction:'收支方向',amount:'金额',payment:'支付方式',status:'交易状态',tradeNo:'交易单号',merchantNo:'商户单号',remark:'备注',category:'原始分类',account:'账户',sourceDetail:'来源',tag:'标签'}[key]+'：第'+(columns[key]+1)+'列（'+headers[columns[key]]+'）'):null).filter(Boolean);
   const sample=dataRows.slice(0,3);
-  const keywords=['交易时间','交易类型','交易对方','商品','金额','收/支','支付方式','当前状态','备注'];
-  const detected=keywords.map(k=>{const i=headers.findIndex(h=>h.includes(k));return i>=0?k+'：第'+(i+1)+'列（'+headers[i]+'）':null;}).filter(Boolean);
-  box.innerHTML='<div style="background:#f5f8ff;border-radius:12px;padding:12px;margin-top:12px"><b style="font-size:13px">文件读取成功</b><p class="muted">文件名：'+escapeHtml(file.name)+'<br>有效行数（含表头）：'+nonempty.length+'<br>识别到的列数：'+headers.length+'</p><b style="font-size:13px">识别到的字段</b><p class="muted">'+(detected.length?detected.map(escapeHtml).join('<br>'):'暂未匹配常见微信账单字段，请检查下方表头。')+'</p><b style="font-size:13px">表头</b><p class="muted">'+headers.map(escapeHtml).join(' ｜ ')+'</p><b style="font-size:13px">前3行样例（仅显示在本机）</b><div style="overflow:auto"><table style="border-collapse:collapse;font-size:11px;white-space:nowrap">'+sample.map(row=>'<tr>'+row.map(v=>'<td style="border:1px solid #e3e8f1;padding:5px">'+escapeHtml(String(v))+'</td>').join('')+'</tr>').join('')+'</table></div></div>';
+  box.innerHTML='<div style="background:#f5f8ff;border-radius:12px;padding:12px;margin-top:12px"><b style="font-size:13px">文件读取成功 · '+escapeHtml(sourceType)+'</b><p class="muted">文件名：'+escapeHtml(file.name)+'<br>有效行数（含表头）：'+(dataRows.length+1)+'<br>识别到的列数：'+headers.length+'</p><b style="font-size:13px">识别到的字段</b><p class="muted">'+(labels.length?labels.map(escapeHtml).join('<br>'):'暂未匹配到字段')+'</p><b style="font-size:13px">表头</b><p class="muted">'+headers.map(escapeHtml).join(' ｜ ')+'</p><b style="font-size:13px">前3行样例（仅显示在本机）</b><div style="overflow:auto"><table style="border-collapse:collapse;font-size:11px;white-space:nowrap">'+sample.map(row=>'<tr>'+row.map(v=>'<td style="border:1px solid #e3e8f1;padding:5px">'+escapeHtml(String(v))+'</td>').join('')+'</tr>').join('')+'</table></div></div>';
   box.insertAdjacentHTML('beforeend','<button onclick="confirmImport()" style="margin-top:12px;border:0;border-radius:10px;background:#16a36a;color:white;padding:12px;width:100%;font-size:14px">确认导入并保存在本机</button>');
-  status.textContent='读取完成。核对字段无误后，点击下方按钮导入；数据将保存在当前浏览器本机，不会上传。';
+  status.textContent='读取完成。请核对字段及样例，确认无误后再导入；数据仅保存在当前浏览器本机。';
  }catch(e){status.textContent='读取失败：'+e.message;}
 }
 
@@ -292,16 +322,9 @@ function getSavedBills(){
  try{
   const raw=localStorage.getItem(WECHAT_STORE_KEY)||'[]';
   if(raw!==savedBillsCacheRaw){
-   const parsed=JSON.parse(raw);
-   savedBillsCache=Array.isArray(parsed)?parsed:[];
-   savedBillsCacheRaw=raw;
-   refundTotalsByExpenseId=new Map();
-   for(const bill of savedBillsCache){
-    if(bill&&bill.direction==='收入'&&bill.refundForId){
-     const id=String(bill.refundForId),amount=Number(bill.amount||0);
-     if(Number.isFinite(amount))refundTotalsByExpenseId.set(id,(refundTotalsByExpenseId.get(id)||0)+amount);
-    }
-   }
+   const parsed=JSON.parse(raw);savedBillsCache=Array.isArray(parsed)?parsed:[];
+   savedBillsCacheRaw=raw;refundTotalsByExpenseId=new Map();
+   for(const bill of savedBillsCache){if(bill&&bill.direction==='收入'&&bill.refundForId){const id=String(bill.refundForId),amount=Number(bill.amount||0);if(Number.isFinite(amount))refundTotalsByExpenseId.set(id,(refundTotalsByExpenseId.get(id)||0)+amount);}}
   }
   return savedBillsCache;
  }catch(e){savedBillsCacheRaw=null;savedBillsCache=[];refundTotalsByExpenseId=new Map();return [];}
@@ -309,46 +332,38 @@ function getSavedBills(){
 function getRefundTotalsByExpenseId(){getSavedBills();return refundTotalsByExpenseId;}
 function confirmImport(){
  const p=window.pendingWechatRows;if(!p){alert('请先读取账单文件。');return;}
- const idx={};p.headers.forEach((h,i)=>idx[String(h).trim()]=i);
- const val=(r,k)=>{const i=idx[k];return i===undefined?'':String(r[i]??'').trim()};
- const existing=getSavedBills(),added=[];
- /* 两层去重：先按微信交易单号/商户单号识别；无可用单号时，按全部账单信息字段精确比对。 */
- const tradeNos=new Set(),merchantNos=new Set(),fullSignatures=new Set();
+ const idx=p.columns||detectImportColumns(p.headers);
+ const val=(r,k)=>idx[k]===undefined?'':String(r[idx[k]]??'').trim();
+ const existing=getSavedBills(),added=[],tradeNos=new Set(),merchantNos=new Set(),fullSignatures=new Set();
  const norm=v=>String(v??'').trim();
- const fullSignature=b=>JSON.stringify([
-  norm(b.time),norm(b.type),norm(b.counterparty),norm(b.product),norm(b.direction),
-  Number(b.amount),norm(b.payment),norm(b.status),norm(b.tradeNo),norm(b.merchantNo),norm(b.remark)
- ]);
- existing.forEach(b=>{
-  if(!b)return;
-  if(norm(b.tradeNo))tradeNos.add(norm(b.tradeNo));
-  if(norm(b.merchantNo))merchantNos.add(norm(b.merchantNo));
-  fullSignatures.add(fullSignature(b));
- });
- let duplicateCount=0,invalidCount=0;
+ const fullSignature=b=>JSON.stringify([norm(b.time),norm(b.type),norm(b.counterparty),norm(b.product),norm(b.direction),Number(b.amount),norm(b.payment),norm(b.status),norm(b.tradeNo),norm(b.merchantNo),norm(b.remark),norm(b.category),norm(b.account),norm(b.sourceDetail),norm(b.tag)]);
+ existing.forEach(b=>{if(!b)return;if(norm(b.tradeNo))tradeNos.add(norm(b.tradeNo));if(norm(b.merchantNo))merchantNos.add(norm(b.merchantNo));fullSignatures.add(fullSignature(b));});
+ let duplicateCount=0,invalidCount=0,ignoredCount=0;
  p.dataRows.forEach(r=>{
-  const time=val(r,'交易时间'),type=val(r,'交易类型'),counterparty=val(r,'交易对方'),product=val(r,'商品'),direction=val(r,'收/支'),rawAmount=val(r,'金额(元)'),payment=val(r,'支付方式'),status=val(r,'当前状态'),tradeNo=val(r,'交易单号'),merchantNo=val(r,'商户单号'),remark=val(r,'备注');
-  const amount=Number(rawAmount.replace(/[￥¥,\\s]/g,''));
-  if(!time||!Number.isFinite(amount)){invalidCount++;return;}
-  const bill={id:'',time,type,counterparty,product,direction,amount,payment,status,tradeNo,merchantNo,remark,category:'未分类',source:p.fileName};
-  const signature=fullSignature(bill);
-  const duplicated=(tradeNo&&tradeNos.has(tradeNo))||(merchantNo&&merchantNos.has(merchantNo))||fullSignatures.has(signature);
+  const time=val(r,'time'),type=val(r,'type'),counterparty=val(r,'counterparty'),product=val(r,'product'),direction=val(r,'direction'),rawAmount=val(r,'amount');
+  const amount=Number(rawAmount.replace(/[￥¥,，\\s元]/g,''));
+  if(!time||!Number.isFinite(amount)||amount<=0||!['支出','收入'].includes(direction)){invalidCount++;return;}
+  const category=val(r,'category'),remark=val(r,'remark'),account=val(r,'account'),sourceDetail=val(r,'sourceDetail'),tag=val(r,'tag');
+  const payment=val(r,'payment')||account,status=val(r,'status'),tradeNo=val(r,'tradeNo'),merchantNo=val(r,'merchantNo');
+  const bill={id:'',time,type:type||(p.sourceType==='微信账单'?'微信支付账单':'支付宝账单'),counterparty,product:product||remark,direction,amount,payment,status,tradeNo,merchantNo,remark,category:category||'未分类',account,sourceDetail,tag,source:p.fileName,importPlatform:p.sourceType};
+  const signature=fullSignature(bill),duplicated=(tradeNo&&tradeNos.has(tradeNo))||(merchantNo&&merchantNos.has(merchantNo))||fullSignatures.has(signature);
   if(duplicated){duplicateCount++;return;}
   bill.id=tradeNo||merchantNo||('import_'+signature);
   tradeNos.add(tradeNo);merchantNos.add(merchantNo);fullSignatures.add(signature);
-  applySavedMerchantRulesToBill(bill);added.push(bill);
+  const originalCategory=bill.category;
+  if(typeof applySavedMerchantRulesToBill==='function')applySavedMerchantRulesToBill(bill);
+  if(category)bill.category=originalCategory;
+  added.push(bill);
  });
  const merged=existing.concat(added);
- try{localStorage.setItem(WECHAT_STORE_KEY,JSON.stringify(merged));}
- catch(e){alert('本机存储空间不足，未能保存全部账单。请减少导入范围或先备份数据。');return;}
- savedBillsCacheRaw=null;getSavedBills();
- renderHome();document.getElementById('importStatus').textContent='导入完成：新增 '+added.length+' 笔，重复跳过 '+duplicateCount+' 笔'+(invalidCount?'，无效数据 '+invalidCount+' 行':'')+'。本机累计保存 '+merged.length+' 笔。';
+ try{localStorage.setItem(WECHAT_STORE_KEY,JSON.stringify(merged));}catch(e){alert('本机存储空间不足，未能保存全部账单。请减少导入范围或先备份数据。');return;}
+ savedBillsCacheRaw=null;getSavedBills();renderHome();
+ document.getElementById('importStatus').textContent='导入完成：新增 '+added.length+' 笔，重复跳过 '+duplicateCount+' 笔，无效/非收支记录 '+invalidCount+' 行。本机累计保存 '+merged.length+' 笔。';
  document.getElementById('importPreview').insertAdjacentHTML('beforeend','<p class="muted">已保存到当前浏览器本机。换设备或清除浏览器数据可能导致数据无法继续访问，请后续使用备份功能。</p>');
  renderBills();
- try{const history=readImportHistory();history.push({createdAt:new Date().toISOString(),importedAt:new Date().toLocaleString('zh-CN',{hour12:false}),fileName:p.fileName||'未命名文件',sourceRows:p.dataRows.length,added:added.length,skipped:duplicateCount,invalid:invalidCount,totalAfter:merged.length});saveImportHistory(history);}catch(e){console.warn('导入历史记录保存失败',e);}
- alert('导入完成，新增 '+added.length+' 笔账单，重复跳过 '+duplicateCount+' 笔'+(invalidCount?'，无效数据 '+invalidCount+' 行':'')+'。');
-}
-const EXPENSE_CATEGORIES=['餐饮','交通出行','居家生活','购物','医疗健康','娱乐','教育','通讯数码','人情往来','其他'];
+ try{const history=readImportHistory();history.push({createdAt:new Date().toISOString(),importedAt:new Date().toLocaleString('zh-CN',{hour12:false}),fileName:p.fileName||'未命名文件',sourceRows:p.dataRows.length,added:added.length,skipped:duplicateCount,invalid:invalidCount,totalAfter:merged.length,sourceType:p.sourceType||'账单'});saveImportHistory(history);}catch(e){console.warn('导入历史记录保存失败',e);}
+ alert('导入完成，新增 '+added.length+' 笔账单，重复跳过 '+duplicateCount+' 笔，无效/非收支记录 '+invalidCount+' 行。');
+}const EXPENSE_CATEGORIES=['餐饮','交通出行','居家生活','购物','医疗健康','娱乐','教育','通讯数码','人情往来','其他'];
 const INCOME_CATEGORIES=['工资','奖金','理财收入','退款/报销','其他收入'];
 const SUBCATEGORIES={
  '餐饮':['早餐','午餐','晚餐','零食饮品','外卖','聚餐'],
@@ -394,7 +409,7 @@ let activeBillId=null;
 function categoryNames(){return [...new Set([...EXPENSE_CATEGORIES,...INCOME_CATEGORIES,...getSavedBills().map(x=>x.category).filter(x=>x&&x!=='未分类'),'未分类'])]}
 function refreshAfterCategoryChange(){renderBills();renderCategorySummary();renderHome();renderAnalysis()}
 function changeBillCategory(id,category){const b=getSavedBills(),i=b.findIndex(x=>x.id===id);if(i<0)return;b[i].category=category;b[i].subcategory='';localStorage.setItem(WECHAT_STORE_KEY,JSON.stringify(b));rememberCategoryUsage(b);refreshAfterCategoryChange();openBillDetail(id)}
-function openBillDetail(encodedId){const id=decodeURIComponent(encodedId);const x=getSavedBills().find(v=>v.id===id);if(!x)return;activeBillId=id;const isManual=x.source==='手动录入'||String(x.id||'').startsWith('manual_')||x.type==='手动记账',sourceLabel=isManual?'手动记录':'导入数据';const cats=categoryNames();const options=cats.map(c=>'<option value="'+escapeHtml(c)+'" '+((x.category||'未分类')===c?'selected':'')+'>'+escapeHtml(c)+'</option>').join('');document.getElementById('billDetailContent').innerHTML='<div style="background:#f6f8fc;border-radius:12px;padding:13px;margin-bottom:16px"><div style="font-size:16px;font-weight:700">'+escapeHtml(x.counterparty||x.product||'未填写交易对象')+'</div><div class="muted" style="margin-top:7px;line-height:1.8">交易日期：'+escapeHtml(x.time||'未记录')+'<br>数据来源：'+sourceLabel+'<br>商品/备注：'+escapeHtml([x.product,x.remark].filter(Boolean).join(' · ')||'无')+'<br>交易类型：'+escapeHtml(x.type||'未记录')+'<br>收支方向：'+escapeHtml(x.direction||'未记录')+'<br>支付方式：'+escapeHtml(x.payment||'未记录')+'<br>交易状态：'+escapeHtml(x.status||'未记录')+'</div><div style="font-size:23px;font-weight:750;margin-top:10px">'+(x.direction==='支出'?'-':x.direction==='收入'?'+':'')+money(x.amount)+'</div></div><label class="muted">当前分类（单级）<select id="detailCategorySelect" onchange="saveDetailCategory()" style="display:block;width:100%;padding:13px;border:1px solid var(--line);border-radius:10px;margin-top:7px;font-size:15px;background:white">'+options+'</select></label><div style="display:flex;gap:8px;margin-top:12px"><button onclick="addCategoryFromDetail()" style="flex:1;border:0;border-radius:9px;background:#eef3ff;color:#3978f6;padding:12px">＋新增分类</button><button onclick="renameCategoryFromDetail()" style="flex:1;border:0;border-radius:9px;background:#f3f5f8;color:#344054;padding:12px">重命名当前分类</button></div><p class="muted" style="line-height:1.6;margin-bottom:0">重命名分类会同步更新所有使用该名称的账单。相同名称不允许重复创建。</p>'+(isManual?'<button type="button" onclick="deleteManualBill(\''+encodeURIComponent(id)+'\')" style="width:100%;margin-top:14px;border:0;border-radius:10px;background:#fff0f0;color:#c62828;padding:13px;font-weight:700">删除这笔手动记录</button>':'');const modal=document.getElementById('billDetailModal');modal.style.display='flex';}
+function openBillDetail(encodedId){const id=decodeURIComponent(encodedId);const x=getSavedBills().find(v=>v.id===id);if(!x)return;activeBillId=id;const isManual=x.source==='手动录入'||String(x.id||'').startsWith('manual_')||x.type==='手动记账',sourceLabel=isManual?'手动记录':'导入数据';const cats=categoryNames();const options=cats.map(c=>'<option value="'+escapeHtml(c)+'" '+((x.category||'未分类')===c?'selected':'')+'>'+escapeHtml(c)+'</option>').join('');document.getElementById('billDetailContent').innerHTML='<div style="background:#f6f8fc;border-radius:12px;padding:13px;margin-bottom:16px"><div style="font-size:16px;font-weight:700">'+escapeHtml(x.counterparty||x.product||'未填写交易对象')+'</div><div class="muted" style="margin-top:7px;line-height:1.8">交易日期：'+escapeHtml(x.time||'未记录')+'<br>数据来源：'+sourceLabel+'<br>商品/备注：'+escapeHtml([x.product,x.remark].filter(Boolean).join(' · ')||'无')+'<br>交易类型：'+escapeHtml(x.type||'未记录')+'<br>收支方向：'+escapeHtml(x.direction||'未记录')+'<br>支付方式：'+escapeHtml(x.payment||'未记录')+'<br>账户：'+escapeHtml(x.account||'未记录')+'<br>账单来源：'+escapeHtml(x.sourceDetail||x.importPlatform||'未记录')+'<br>标签：'+escapeHtml(x.tag||'无')+'<br>交易状态：'+escapeHtml(x.status||'未记录')+'</div><div style="font-size:23px;font-weight:750;margin-top:10px">'+(x.direction==='支出'?'-':x.direction==='收入'?'+':'')+money(x.amount)+'</div></div><label class="muted">当前分类（单级）<select id="detailCategorySelect" onchange="saveDetailCategory()" style="display:block;width:100%;padding:13px;border:1px solid var(--line);border-radius:10px;margin-top:7px;font-size:15px;background:white">'+options+'</select></label><div style="display:flex;gap:8px;margin-top:12px"><button onclick="addCategoryFromDetail()" style="flex:1;border:0;border-radius:9px;background:#eef3ff;color:#3978f6;padding:12px">＋新增分类</button><button onclick="renameCategoryFromDetail()" style="flex:1;border:0;border-radius:9px;background:#f3f5f8;color:#344054;padding:12px">重命名当前分类</button></div><p class="muted" style="line-height:1.6;margin-bottom:0">重命名分类会同步更新所有使用该名称的账单。相同名称不允许重复创建。</p>'+(isManual?'<button type="button" onclick="deleteManualBill(\''+encodeURIComponent(id)+'\')" style="width:100%;margin-top:14px;border:0;border-radius:10px;background:#fff0f0;color:#c62828;padding:13px;font-weight:700">删除这笔手动记录</button>':'');const modal=document.getElementById('billDetailModal');modal.style.display='flex';}
 function closeBillDetail(){document.getElementById('billDetailModal').style.display='none';activeBillId=null}
 function deleteManualBill(encodedId){const id=decodeURIComponent(encodedId),bills=getSavedBills(),x=bills.find(v=>v.id===id);if(!x||!(x.source==='手动录入'||String(x.id||'').startsWith('manual_')||x.type==='手动记账'))return alert('仅允许删除手动记录。');const linked=bills.some(v=>v.direction==='收入'&&v.refundForId===id);if(x.refundForId||linked)return alert('这笔记录存在退款/冲销关联。请先解除关联，再删除，避免统计数据异常。');if(!confirm('确定删除这笔手动记录吗？删除后无法直接恢复，建议先备份数据。'))return;localStorage.setItem(WECHAT_STORE_KEY,JSON.stringify(bills.filter(v=>v.id!==id)));savedBillsCacheRaw=null;getSavedBills();closeBillDetail();refreshAfterCategoryChange();alert('手动记录已删除。');}
 const MERCHANT_RULES_KEY='expense_assistant_merchant_rules_v1';
