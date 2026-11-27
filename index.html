@@ -123,7 +123,7 @@ body[data-theme="dark"] #billDetailContent [data-category-tag="冲销抵账"][ar
 
 /* iOS Safari：表单控件字体小于16px时，聚焦可能自动放大页面。统一设置避免输入时视口缩放。 */
 input:not([type="checkbox"]):not([type="radio"]):not([type="file"]), select, textarea { font-size:16px !important; }
-.category-sticky-head{position:sticky;top:0;z-index:8;width:100%;display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 13px;margin:0 0 6px;border:1px solid var(--line);border-radius:11px;background:var(--card);color:var(--text);font-size:14px;font-weight:700;text-align:left;box-shadow:0 4px 12px #18223012;cursor:pointer;}
+.category-sticky-head{position:-webkit-sticky;position:sticky;top:env(safe-area-inset-top,0px);z-index:30;width:100%;display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 13px;margin:0 0 6px;border:1px solid var(--line);border-radius:11px;background:var(--card);color:var(--text);font-size:14px;font-weight:700;text-align:left;box-shadow:0 4px 12px #18223012;cursor:pointer;}
 body[data-theme="dark"] .category-sticky-head{background:#1f2937;color:#f3f4f6;border-color:#465469;box-shadow:0 4px 12px #0004}
 </style></head>
 <body><main class="app">
@@ -154,7 +154,7 @@ body[data-theme="dark"] .category-sticky-head{background:#1f2937;color:#f3f4f6;b
 <div class="section"><h2>支出分类汇总</h2><span>笔数 · 净支出金额</span></div><div class="card" id="expenseCategorySummary"><p class="muted">暂无数据</p></div>
 <div class="section"><h2>收入分类汇总</h2><span>笔数 · 收入金额</span></div><div class="card" id="incomeCategorySummary"><p class="muted">暂无数据</p></div>
 
-<div class="section"><h2>全部账单明细</h2><span>当前筛选结果</span></div><div id="billCategoryFilterNotice" style="display:none;margin:0 0 10px;padding:11px 13px;background:#edf4ff;color:#245fc7;border-radius:11px;font-size:13px"></div><div class="card"><div id="billList"><div class="empty">尚未导入真实账单。</div></div></div>
+<div id="billCategoryFilterNotice" style="display:none"></div><div id="billList" style="display:none" aria-hidden="true"></div><div id="dimensionCategorySummaries"></div>
 </section>
 <section id="analysis" class="page">
 <div class="section"><h2>BI 数据分析</h2><span>基于本机已导入账单</span></div>
@@ -1453,7 +1453,7 @@ function testRecognitionRules(){const text=String(document.getElementById('recog
   const row='<button type="button" id="classificationGuideEntry" class="tx" onclick="openClassificationGuide()" style="width:100%;border:0;border-top:1px solid var(--line);background:white;text-align:left;padding:12px 0"><div class="icon">📘</div><div class="txmain"><b>分类与记账使用说明</b><small>查看分类定义、消费归属和储蓄投资的记账规则</small></div><span>›</span></button>';
   if(anchor)anchor.insertAdjacentHTML('beforebegin',row);else mine.querySelector('.card')?.insertAdjacentHTML('beforeend',row);
   const modal=document.createElement('div');modal.id='classificationGuideModal';modal.style.cssText='display:none;position:fixed;inset:0;z-index:1500;background:#10182899;padding:16px;box-sizing:border-box;align-items:center;justify-content:center';
-  modal.innerHTML='<section style="width:min(620px,100%);max-height:88vh;overflow:auto;background:var(--card);color:var(--text);border-radius:18px;padding:18px;box-sizing:border-box"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><b style="font-size:18px">分类与记账使用说明</b><button type="button" onclick="closeClassificationGuide()" style="border:0;border-radius:20px;padding:8px 12px">关闭</button></div><p class="muted" style="line-height:1.7">本助手采用「一级分类 + 消费归属 + 交易性质」三层记录方式。分类回答钱花在什么方面；消费归属回答这笔钱主要属于谁；交易性质区分日常消费与储蓄投资。</p><h3>一、支出一级分类（10类）</h3><div style="font-size:13px;line-height:1.85"><b>1. 餐饮美食</b>：正餐、外卖、早餐、奶茶、咖啡、水果、零食等。<br><b>2. 居住生活</b>：房租物业、水电燃气、家庭日用品、家政、家庭维修等。<br><b>3. 交通出行</b>：公交地铁、打车、加油、停车、高速费、汽车维修保养及车险等。<br><b>4. 购物消费</b>：衣服鞋包、数码产品、家电、网购及非日常家庭消耗品等。<br><b>5. 育儿教育</b>：奶粉、尿不湿、母婴用品、托育、幼儿园、学费、课程、儿童玩具绘本等。<br><b>6. 医疗健康</b>：医院、药品、挂号、体检、牙科、疫苗及医疗服务等。<br><b>7. 休闲娱乐</b>：旅游、酒店、电影、游戏、演出、健身及娱乐活动等。<br><b>8. 人情社交</b>：红包、礼金、随礼、送礼、请客及社交聚会等。<br><b>9. 金融保险</b>：人寿保险、重疾险、意外险、理财、基金及储蓄规划等金融类事项。<br><b>10. 其他支出</b>：确实无法归入以上类别的支出。尽量不要把有明确用途的交易都放进此类。</div><h3>二、收入分类</h3><p class="muted" style="font-size:13px;line-height:1.8">工资、奖金、理财收入、退款/报销、其他收入。另有系统专用的「冲销抵账」，用于关联原始支出退款，不作为普通收入统计。</p><h3>三、消费归属（5个标签）</h3><p class="muted" style="font-size:13px;line-height:1.8"><b>本人</b>：主要由本人使用；<b>老婆</b>：主要由配偶使用；<b>小孩</b>：孩子相关开支或资金安排；<b>家庭共用</b>：全家共同使用；<b>未指定</b>：无法判断或暂时不确定。归属标签不是第二级分类，不改变支出类别。</p><h3>四、交易性质：日常收支 / 储蓄投资</h3><p class="muted" style="font-size:13px;line-height:1.8"><b>日常收支</b>：实际消费、账单支付及普通收入，按正常收支统计。<br><b>储蓄投资</b>：转入储蓄、定期存款、育儿基金、教育金或投资账户的资金。它不是家庭已经消费掉的钱，因此不计入「日常支出」，而单独统计储蓄投资金额。若只是本人不同账户之间转账，应标记为储蓄投资/资金转移，不要重复算作消费；取回本金也不要当作工资等新增收入。</p><h3>五、典型例子</h3><div style="background:var(--soft,#f5f7fb);border-radius:10px;padding:11px;font-size:13px;line-height:1.8">每月给孩子存入育儿基金 2,000 元：<br>一级分类：<b>金融保险</b><br>消费归属：<b>小孩</b><br>交易性质：<b>储蓄投资</b><br>用途标签：<b>育儿基金</b><br>累计存 3 年：72,000 元。该金额单独看作家庭资金积累，不计入日常消费支出。</div><h3>六、自动分类提醒</h3><p class="muted" style="font-size:13px;line-height:1.8">系统会根据交易对象、商品和备注中的关键词辅助判断，但自动分类不保证百分之百准确。遇到信息不足、商户名称含糊或金额性质不清楚的记录，请打开账单详情手动调整。尤其「转账」「存入」可能是账户间资金移动，不应仅凭一个词就判断为消费。</p><p class="muted" style="font-size:12px;line-height:1.6">数据保存在当前设备浏览器中。更换设备或清理浏览器数据前，请先使用「备份与恢复」导出备份。</p></section>';
+  modal.innerHTML='<section style="width:min(620px,100%);max-height:88vh;overflow:auto;background:var(--card);color:var(--text);border-radius:18px;padding:18px;box-sizing:border-box"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><b style="font-size:18px">分类与记账使用说明</b><button type="button" onclick="closeClassificationGuide()" style="border:0;border-radius:20px;padding:8px 12px">关闭</button></div><p class="muted" style="line-height:1.7">本助手采用「一级分类 + 消费归属 + 交易性质」三层记录方式。分类回答钱花在什么方面；消费归属回答这笔钱主要属于谁；交易性质区分日常消费与储蓄投资。</p><h3>一、支出一级分类（10类）</h3><div style="font-size:13px;line-height:1.85"><b>1. 餐饮美食</b>：正餐、外卖、早餐、奶茶、咖啡、水果、零食等。<br><b>2. 居住生活</b>：房租物业、水电燃气、家庭日用品、家政、家庭维修等。<br><b>3. 交通出行</b>：公交地铁、打车、加油、停车、高速费、汽车维修保养及车险等。<br><b>4. 购物消费</b>：衣服鞋包、数码产品、家电、网购及非日常家庭消耗品等。<br><b>5. 育儿教育</b>：奶粉、尿不湿、母婴用品、托育、幼儿园、学费、课程、儿童玩具绘本等。<br><b>6. 医疗健康</b>：医院、药品、挂号、体检、牙科、疫苗及医疗服务等。<br><b>7. 休闲娱乐</b>：旅游、酒店、电影、游戏、演出、健身及娱乐活动等。<br><b>8. 人情社交</b>：红包、礼金、随礼、送礼、请客及社交聚会等。<br><b>9. 金融保险</b>：人寿保险、重疾险、意外险、理财、基金及储蓄规划等金融类事项。<br><b>10. 其他支出</b>：确实无法归入以上类别的支出。尽量不要把有明确用途的交易都放进此类。</div><h3>二、收入分类</h3><p class="muted" style="font-size:13px;line-height:1.8">工资、奖金、理财收入、退款/报销、其他收入。另有系统专用的「冲销抵账」，用于关联原始支出退款，不作为普通收入统计。</p><h3>三、消费归属（5个标签）</h3><p class="muted" style="font-size:13px;line-height:1.8"><b>本人</b>：主要由本人使用；<b>老婆</b>：主要由配偶使用；<b>小孩</b>：孩子相关开支或资金安排；<b>家庭共用</b>：全家共同使用；<b>未指定</b>：无法判断或暂时不确定。归属标签不是第二级分类，不改变支出类别。</p><h3>四、交易性质：日常收支 / 储蓄投资</h3><p class="muted" style="font-size:13px;line-height:1.8"><b>日常收支</b>：实际消费、账单支付及普通收入，按正常收支统计。<br><b>储蓄投资</b>：转入储蓄、定期存款、育儿基金、教育金或投资账户的资金。它不是家庭已经消费掉的钱，因此不计入「日常支出」，而单独统计储蓄投资金额。若只是本人不同账户之间转账，应标记为储蓄投资/资金转移，不要重复算作消费；取回本金也不要当作工资等新增收入。</p><h3>五、典型例子</h3><div style="background:var(--soft,#f5f7fb);border-radius:10px;padding:11px;font-size:13px;line-height:1.8">每月给孩子存入育儿基金 2,000 元：<br>一级分类：<b>金融保险</b><br>消费归属：<b>小孩</b><br>交易性质：<b>储蓄投资</b><br>用途标签：<b>育儿基金（可多选）</b><br>累计存 3 年：72,000 元。该金额单独看作家庭资金积累，不计入日常消费支出。</div><h3>六、自动分类提醒</h3><p class="muted" style="font-size:13px;line-height:1.8">系统会根据交易对象、商品和备注中的关键词辅助判断，但自动分类不保证百分之百准确。遇到信息不足、商户名称含糊或金额性质不清楚的记录，请打开账单详情手动调整。尤其「转账」「存入」可能是账户间资金移动，不应仅凭一个词就判断为消费。</p><p class="muted" style="font-size:12px;line-height:1.6">数据保存在当前设备浏览器中。更换设备或清理浏览器数据前，请先使用「备份与恢复」导出备份。</p></section>';
   modal.addEventListener('click',e=>{if(e.target===modal)window.closeClassificationGuide();});document.body.appendChild(modal);
  }
  window.openClassificationGuide=function(){const m=document.getElementById('classificationGuideModal');if(m)m.style.display='flex';};
@@ -1472,7 +1472,7 @@ function testRecognitionRules(){const text=String(document.getElementById('recog
   const time=localDateTimeValue(d).replace('T',' ')+':00',category=document.getElementById('manualCategory').value,payment=document.getElementById('manualPayment').value,remark=String(document.getElementById('manualRemark').value||'').trim();
   const nature=document.getElementById('manualNature')?.value||'日常收支',owner=document.getElementById('manualOwner')?.value||'未指定',purpose=document.getElementById('manualPurpose')?.value||'日常消费';
   if(nature==='储蓄投资'&&direction!=='支出')return alert('储蓄投资记录请以资金转出/存入账户的支出方向记录；取回本金不要记为工资收入。');
-  const id='manual_'+Date.now()+'_'+Math.random().toString(36).slice(2,8),bill={id,time,type:'手动记账',counterparty:'',product:'',direction,amount,payment,status:'已确认',tradeNo:'',merchantNo:'',remark,category:nature==='储蓄投资'?'金融保险':category,source:'手动录入',transactionNature:nature,owner,purposeTag:purpose};
+  const id='manual_'+Date.now()+'_'+Math.random().toString(36).slice(2,8),bill={id,time,type:'手动记账',counterparty:'',product:'',direction,amount,payment,status:'已确认',tradeNo:'',merchantNo:'',remark,category:nature==='储蓄投资'?'金融保险':category,source:'手动录入',transactionNature:nature,owner,purposeTag:purpose?purpose.split('|').filter(Boolean):[]};
   const bills=getSavedBills();bills.push(bill);try{saveBills(bills);rememberCategoryUsage(bills);}catch(e){return alert('本机存储失败，未能保存这笔账单。');}
   closeManualEntry();refreshAfterCategoryChange();alert(nature==='储蓄投资'?'已保存储蓄投资记录：'+money(amount)+'。该笔金额不会计入日常支出。':'已保存这笔'+direction+'：'+money(amount));
  };
@@ -1482,11 +1482,11 @@ function testRecognitionRules(){const text=String(document.getElementById('recog
   if(bill&&bill.direction==='支出'){
    const v=infer(bill);
    bill.transactionNature=v.savings?'储蓄投资':'日常收支';
-   bill.purposeTag=v.purpose;
+   bill.purposeTag=[v.purpose];
    bill.owner=v.owner;
    if(v.purpose==='育儿基金'||v.purpose==='储蓄规划'||v.purpose==='理财投资'||v.purpose==='保险保障')bill.category='金融保险';
    if(!matched&&bill.transactionNature!=='储蓄投资'&&(!bill.category||bill.category==='未分类'))bill.category=(typeof inferCategory==='function'?inferCategory(bill):'其他支出');
-  }else if(bill){bill.transactionNature='日常收支';bill.purposeTag='日常消费';}
+  }else if(bill){bill.transactionNature='日常收支';bill.purposeTag=['日常消费'];}
   return true;
  };
  applySavedMerchantRulesToBill=window.applySavedMerchantRulesToBill;
@@ -1495,7 +1495,7 @@ function testRecognitionRules(){const text=String(document.getElementById('recog
   const id=decodeURIComponent(encodedId),x=getSavedBills().find(v=>v.id===id);if(!x)return;
   originalOpenBillDetail(encodedId);
   const box=document.getElementById('billDetailContent');if(!box)return;
-  if(!x.transactionNature)x.transactionNature='日常收支';if(!x.owner)x.owner='未指定';if(!x.purposeTag)x.purposeTag='日常消费';
+  if(!x.transactionNature)x.transactionNature='日常收支';if(!x.owner)x.owner='未指定';if(!x.purposeTag)x.purposeTag=['日常消费'];
   const fields='<div style="display:grid;grid-template-columns:1fr;gap:10px;margin-top:14px"><label class="muted">交易性质<select id="detailNature" style="display:block;width:100%;padding:12px;border:1px solid var(--line);border-radius:9px;margin-top:6px;background:white"><option value="日常收支">日常收支</option><option value="储蓄投资">储蓄投资</option></select></label><label class="muted">消费归属<select id="detailOwner" style="display:block;width:100%;padding:12px;border:1px solid var(--line);border-radius:9px;margin-top:6px;background:white">'+OWNERS.map(v=>'<option value="'+v+'">'+v+'</option>').join('')+'</select></label><label class="muted">用途标签<select id="detailPurpose" style="display:block;width:100%;padding:12px;border:1px solid var(--line);border-radius:9px;margin-top:6px;background:white">'+PURPOSES.map(v=>'<option value="'+v+'">'+v+'</option>').join('')+'</select></label><button type="button" onclick="saveBillNatureAndOwner()" style="width:100%;border:0;border-radius:9px;background:#3978f6;color:white;padding:12px;font-weight:700">保存交易性质与归属</button></div>';
   box.insertAdjacentHTML('beforeend',fields);document.getElementById('detailNature').value=x.transactionNature;document.getElementById('detailOwner').value=OWNERS.includes(x.owner)?x.owner:'未指定';document.getElementById('detailPurpose').value=PURPOSES.includes(x.purposeTag)?x.purposeTag:'日常消费';
  };
@@ -1509,7 +1509,7 @@ function testRecognitionRules(){const text=String(document.getElementById('recog
  /* 对已有本机账单只做一次增量标记；不覆盖已有人工选择的交易性质。 */
  if(!localStorage.getItem(MIG)){
   const bills=getSavedBills();let marked=0;
-  bills.forEach(b=>{if(!b||b.direction!=='支出')return;const v=infer(b);if(!b.transactionNature){b.transactionNature=v.savings?'储蓄投资':'日常收支';marked++;}if(!b.purposeTag)b.purposeTag=v.purpose;if(!b.owner||!OWNERS.includes(b.owner))b.owner=v.owner;if(v.purpose==='育儿基金'&&b.category!=='金融保险')b.category='金融保险';});
+  bills.forEach(b=>{if(!b||b.direction!=='支出')return;const v=infer(b);if(!b.transactionNature){b.transactionNature=v.savings?'储蓄投资':'日常收支';marked++;}if(!b.purposeTag)b.purposeTag=[v.purpose];if(!b.owner||!OWNERS.includes(b.owner))b.owner=v.owner;if(v.purpose==='育儿基金'&&b.category!=='金融保险')b.category='金融保险';});
   saveBills(bills);localStorage.setItem(MIG,JSON.stringify({at:new Date().toISOString(),marked}));
  }
  addGuide();addManualFields();
@@ -1624,60 +1624,105 @@ function testRecognitionRules(){const text=String(document.getElementById('recog
 
 <script>
 (function(){
-const $=id=>document.getElementById(id),E=v=>escapeHtml(String(v==null?'':v));
-const dims=[
-{key:'direction',name:'收支类型',ok:x=>['收入','支出'].includes(x.direction),get:x=>x.direction},
-{key:'category',name:'一级分类',ok:x=>!!x.category&&x.category!=='未分类',get:x=>x.category},
-{key:'payment',name:'支付方式',ok:x=>!!String(x.payment||'').trim(),get:x=>x.payment},
-{key:'transactionNature',name:'交易性质',ok:x=>['日常收支','储蓄投资'].includes(x.transactionNature),get:x=>x.transactionNature},
-{key:'owner',name:'消费归属',ok:x=>['本人','老婆','小孩','家庭共用','未指定'].includes(x.owner),get:x=>x.owner},
-{key:'purposeTag',name:'用途标签',ok:x=>!!String(x.purposeTag||'').trim(),get:x=>x.purposeTag}
-];
-function complete(){
- const bills=getSavedBills();let box=$('v22Completeness');
- if(!box){box=document.createElement('div');box.id='v22Completeness';box.className='card';const a=$('catTotal')&&$('catTotal').closest('.card');if(a)a.insertAdjacentElement('afterend',box);}
- if(!box)return;
- const missing=bills.filter(x=>dims.some(d=>!d.ok(x))),done=bills.length-missing.length;
- box.innerHTML='<b>六维分类完整度</b><div style="height:8px;background:#edf0f5;border-radius:9px;margin:10px 0"><i style="display:block;height:8px;background:#16a36a;border-radius:9px;width:'+(bills.length?done/bills.length*100:0)+'%"></i></div><div style="font-size:12px;color:#657084;margin-bottom:10px">总账单 '+bills.length+' 笔 · 已完善 '+done+' 笔 · 待完善 '+missing.length+' 笔 · 完整率 '+(bills.length?(done/bills.length*100).toFixed(1):'0.0')+'%</div><div class="v22dim">'+dims.map(d=>'<button type="button" data-v22-dim="'+d.key+'">'+d.name+' <b>'+(bills.filter(x=>!d.ok(x)).length?bills.filter(x=>!d.ok(x)).length+'笔待完善':'已完成')+'</b></button>').join('')+'</div><div id="v22Missing" style="display:none"></div>';
- box.querySelectorAll('[data-v22-dim]').forEach(btn=>btn.onclick=()=>{const d=dims.find(x=>x.key===btn.dataset.v22Dim),rows=bills.filter(x=>!d.ok(x)),out=$('v22Missing');out.style.display='block';out.innerHTML='<b>'+d.name+'待完善（'+rows.length+'笔）</b>'+rows.slice(0,100).map(x=>'<button type="button" data-v22-open="'+encodeURIComponent(x.id)+'" class="v22row"><span>'+E(x.counterparty||x.product||'未填写交易对象')+'<small>'+E(x.time||'')+'</small></span><b>去完善 ›</b></button>').join('');out.querySelectorAll('[data-v22-open]').forEach(b=>b.onclick=()=>openBillDetail(b.dataset.v22Open));});
-}
-const oldSummary=window.renderCategorySummary;
-window.renderCategorySummary=function(){if(oldSummary)oldSummary();complete();};
-window.showCategoryDetails=function(encoded,direction){
- const cat=decodeURIComponent(encoded),rows=getSavedBills().filter(x=>x.direction===direction&&(cat==='未分类'?(!x.category||x.category==='未分类'):x.category===cat)).sort((a,b)=>String(b.time).localeCompare(String(a.time)));
- const parent=$(direction==='收入'?'incomeCategorySummary':'expenseCategorySummary');if(!parent)return;
- const trigger=[...parent.querySelectorAll('button')].find(b=>b.textContent.includes(cat+'（'));if(!trigger)return;
- if(trigger.nextElementSibling&&trigger.nextElementSibling.classList.contains('v22expand')){trigger.nextElementSibling.remove();return;}
- parent.querySelectorAll('.v22expand').forEach(x=>x.remove());
- const panel=document.createElement('div');panel.className='v22expand';
- panel.innerHTML='<b>'+E(cat)+' · '+rows.length+'笔</b>'+rows.map(x=>'<button type="button" class="v22row" data-v22-open="'+encodeURIComponent(x.id)+'"><span><b>'+E(x.counterparty||x.product||'未填写交易对象')+'</b><small>'+E(x.time||'')+' · '+dims.map(d=>d.name+'：'+(d.ok(x)?E(d.get(x)):'未分类')).join(' | ')+'</small></span><b>查看并修改 ›</b></button>').join('');
- trigger.insertAdjacentElement('afterend',panel);panel.querySelectorAll('[data-v22-open]').forEach(b=>b.onclick=()=>openBillDetail(b.dataset.v22Open));
-};
-function extraBI(){
- const data=window.analysisFilteredBills||getSavedBills();let host=$('v22BI');
- if(!host){host=document.createElement('div');host.id='v22BI';const a=$('biIncomeCategories')?.parentElement;if(a)a.insertAdjacentElement('afterend',host);}
- if(!host)return;
- const specs=[['交易性质',x=>x.transactionNature],['用途标签',x=>x.purposeTag],['消费归属',x=>x.owner],['支付方式',x=>x.payment],['收入分类',x=>x.direction==='收入'?x.category:null]];
- host.innerHTML='<div class="section"><h2>多维度分析</h2><span>随当前筛选条件联动</span></div>'+specs.map(([title,key])=>{
-  const m=new Map();data.forEach(x=>{if(title!=='收入分类'&&x.direction!=='支出')return;if(title==='收入分类'&&(x.direction!=='收入'||isOffsetIncome(x)))return;const n=String(key(x)||'未分类');if(!m.has(n))m.set(n,{n,a:0,c:0});const v=m.get(n);v.a+=title==='收入分类'?effectiveIncomeAmount(x):expenseNetAmount(x);v.c++;});
-  const a=[...m.values()].sort((x,y)=>y.a-x.a),total=a.reduce((z,x)=>z+x.a,0);
-  return '<div class="card" style="margin-bottom:10px"><b>'+title+'</b>'+a.map(x=>'<div class="catrow" style="padding:8px 0;border-bottom:1px solid var(--line)"><span>'+E(x.n)+'<small style="display:block;color:#8993a4">'+x.c+'笔 · '+(total?x.a/total*100:0).toFixed(1)+'%</small></span><b>'+money(x.a)+'</b></div>').join('')+'</div>';
- }).join('')+'<div class="section"><h2>近12个月趋势</h2><span>日常支出 / 收入 / 储蓄投资</span></div><div class="card" id="v22MonthTrend"></div><div class="section"><h2>按日对比</h2><span>选择两个自然月比较每日支出</span></div><div class="card"><div class="v22select"><select id="v22A"></select><select id="v22B"></select></div><div id="v22DayTrend"></div></div>';
- const m=new Map();getSavedBills().forEach(x=>{const d=dateParts(x.time);if(!d)return;if(!m.has(d.key))m.set(d.key,{income:0,expense:0,savings:0});const v=m.get(d.key);if(x.direction==='收入'&&!isOffsetIncome(x))v.income+=effectiveIncomeAmount(x);if(x.direction==='支出'){if(x.transactionNature==='储蓄投资')v.savings+=Number(x.amount||0);else v.expense+=expenseNetAmount(x);}});
- const keys=[...m.keys()].sort().slice(-12),vals=keys.map(k=>m.get(k)),max=Math.max(1,...vals.flatMap(v=>[v.income,v.expense,v.savings])),W=320,H=150,P=25,X=i=>P+i*(W-2*P)/Math.max(1,keys.length-1),Y=v=>H-P-v/max*(H-2*P);
- const lines=['expense','income','savings'].map((k,i)=>'<polyline fill="none" stroke="'+['#3978f6','#16a36a','#e6a23c'][i]+'" stroke-width="2.5" points="'+keys.map((k,j)=>X(j)+','+Y(m.get(k)[['expense','income','savings'][i]])).join(' ')+'"/>').join('');
- $('v22MonthTrend').innerHTML=keys.length?'<svg viewBox="0 0 '+W+' '+H+'" style="width:100%"><line x1="'+P+'" y1="'+(H-P)+'" x2="'+(W-P)+'" y2="'+(H-P)+'" stroke="#ddd"/>'+lines+keys.map((k,i)=>'<text x="'+X(i)+'" y="'+(H-5)+'" text-anchor="middle" font-size="8" fill="#8993a4">'+k.slice(5)+'</text>').join('')+'</svg><small class="muted">蓝：日常支出　绿：收入　橙：储蓄投资</small>':'暂无数据';
- const opts=keys.slice().reverse().map(k=>'<option value="'+k+'">'+k+'</option>').join('');$('v22A').innerHTML=opts;$('v22B').innerHTML=opts;if(keys.length>1){$('v22A').value=keys[keys.length-1];$('v22B').value=keys[keys.length-2];}
- function daily(){const ks=[$('v22A').value,$('v22B').value],ss=ks.map(k=>{const a=Array(31).fill(0);getSavedBills().forEach(x=>{const d=dateParts(x.time);if(d&&d.key===k&&x.direction==='支出'&&x.transactionNature!=='储蓄投资')a[Number(d.day)-1]+=expenseNetAmount(x);});return a;});const mx=Math.max(1,...ss.flat()),xx=i=>20+i*280/30,yy=v=>125-v/mx*100;$('v22DayTrend').innerHTML=ks.every(Boolean)?'<svg viewBox="0 0 320 140" style="width:100%">'+ss.map((a,i)=>'<polyline fill="none" stroke="'+(i?'#16a36a':'#3978f6')+'" stroke-width="2" points="'+a.map((v,j)=>xx(j)+','+yy(v)).join(' ')+'"/>').join('')+'</svg><small>'+ks.join(' 对比 ')+'</small>':'需要至少两个有数据的月份';}
- $('v22A').onchange=daily;$('v22B').onchange=daily;daily();
-}
-const oldAnalysis=window.renderAnalysis;
-window.renderAnalysis=function(){if(oldAnalysis)oldAnalysis();extraBI();};
-function init(){
- const nav=document.querySelector('nav.tabs');if(nav){['home','analysis','bills','mine'].forEach(id=>{const b=[...nav.querySelectorAll('button')].find(x=>(x.getAttribute('onclick')||'').includes("'"+id+"'"));if(b)nav.appendChild(b);});}
- const st=document.createElement('style');st.textContent='.v22dim{display:grid;grid-template-columns:1fr 1fr;gap:7px}.v22dim button{display:flex;justify-content:space-between;border:1px solid var(--line);border-radius:9px;padding:9px;background:white;font-size:12px}.v22dim b{color:#c62828}.v22expand{background:#f7f9fc;border:1px solid #e8edf5;border-radius:10px;padding:9px;margin:4px 0 10px}.v22row{display:flex;justify-content:space-between;align-items:center;gap:8px;text-align:left;width:100%;border:0;border-bottom:1px solid var(--line);background:white;padding:10px 3px;font-size:12px}.v22row small{display:block;color:#8993a4;line-height:1.5;margin-top:4px}.v22select{display:grid;grid-template-columns:1fr 1fr;gap:8px}.v22select select{width:100%;padding:9px;border:1px solid var(--line);border-radius:8px;background:white}';document.head.appendChild(st);complete();
-}
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
+ const $=id=>document.getElementById(id), E=v=>escapeHtml(String(v==null?'':v));
+ const OWNERS=['本人','老婆','小孩','家庭共用','未指定'];
+ const NATURES=['日常收支','储蓄投资'];
+ const PURPOSES=['日常消费','储蓄规划','育儿基金','理财投资','保险保障','资金转移'];
+ const purposeTags=x=>{const v=x&&x.purposeTag;if(Array.isArray(v))return [...new Set(v.map(z=>String(z||'').trim()).filter(Boolean))];return String(v||'').trim()?String(v).split(/[|,，]/).map(z=>z.trim()).filter(Boolean):[];};
+ const rowsNow=()=>window.billFilteredRows||getSavedBills();
+ const amountParts=rows=>({expense:rows.filter(x=>x.direction==='支出').reduce((n,x)=>n+expenseNetAmount(x),0),income:rows.filter(x=>x.direction==='收入'&&!isOffsetIncome(x)).reduce((n,x)=>n+effectiveIncomeAmount(x),0)});
+ const moneyParts=rows=>{const a=amountParts(rows);return '支出 '+money(a.expense)+'　·　收入 '+money(a.income);};
+ const billRow=x=>'<button type="button" class="v22row" data-v22-open="'+encodeURIComponent(x.id)+'"><span><b>'+E(x.counterparty||x.product||'未填写交易对象')+'</b><small>'+E(x.time||'')+' · 一级分类：'+E(x.category||'未分类')+' · '+E(x.payment||'支付方式未填')+'</small><small>'+E('性质：'+(x.transactionNature||'未分类')+' · 归属：'+(x.owner||'未分类')+' · 用途：'+(purposeTags(x).join('、')||'未分类'))+'</small></span><b>查看并修改 ›</b></button>';
+ function addStickyPanel(trigger,title,rows){
+  const parent=trigger.parentElement;
+  if(trigger.nextElementSibling&&trigger.nextElementSibling.classList.contains('v22expand')){trigger.nextElementSibling.remove();return;}
+  document.querySelectorAll('.v22expand').forEach(n=>n.remove());
+  const panel=document.createElement('div');panel.className='v22expand';
+  panel.innerHTML='<button type="button" class="category-sticky-head"><span>'+E(title)+'｜'+rows.length+'笔</span><span>收起 ▲</span></button>'+rows.map(billRow).join('')||'<p class="muted">该分类暂无账单。</p>';
+  panel.querySelector('.category-sticky-head').addEventListener('click',()=>panel.remove());
+  trigger.insertAdjacentElement('afterend',panel);
+  panel.querySelectorAll('[data-v22-open]').forEach(b=>b.addEventListener('click',()=>openBillDetail(b.dataset.v22Open)));
+ }
+ function dimensionConfig(){
+  const b=rowsNow();
+  const paymentValues=[...new Set(b.map(x=>String(x.payment||'').trim()).filter(Boolean))].sort((a,z)=>a.localeCompare(z,'zh-CN'));
+  return [
+   {key:'transactionNature',title:'交易性质',values:NATURES,get:x=>NATURES.includes(x.transactionNature)?[x.transactionNature]:[]},
+   {key:'owner',title:'消费归属',values:OWNERS,get:x=>OWNERS.includes(x.owner)?[x.owner]:[]},
+   {key:'purposeTag',title:'用途标签',values:PURPOSES,get:x=>purposeTags(x).filter(v=>PURPOSES.includes(v))},
+   {key:'payment',title:'支付方式',values:paymentValues,get:x=>String(x.payment||'').trim()?[String(x.payment).trim()]:[]}
+  ];
+ }
+ function renderDimensions(){
+  const host=$('dimensionCategorySummaries');if(!host)return;
+  const b=rowsNow();
+  host.innerHTML=dimensionConfig().map(d=>{
+   const groups=d.values.map(v=>({name:v,rows:b.filter(x=>d.get(x).includes(v))})).filter(g=>g.rows.length);
+   const missing=b.filter(x=>!d.get(x).length);
+   if(missing.length)groups.push({name:'未分类',rows:missing,missing:true});
+   return '<div class="section"><h2>'+E(d.title)+'</h2><span>笔数 · 支出 · 收入 · 点击展开</span></div><div class="card v22dimension-card" data-dimension="'+d.key+'">'+(groups.length?groups.map(g=>{const a=amountParts(g.rows);return '<button type="button" class="v22group" data-dim-key="'+d.key+'" data-dim-value="'+encodeURIComponent(g.name)+'"><span><b>'+(g.missing?'🔴 ':'')+E(g.name)+'</b><small>'+g.rows.length+'笔</small></span><span class="v22amounts"><b>支出 '+money(a.expense)+'</b><small>收入 '+money(a.income)+'</small></span><span>查看 ›</span></button>';}).join(''):'<p class="muted">暂无账单</p>')+'</div>';
+  }).join('');
+  host.querySelectorAll('[data-dim-key]').forEach(btn=>btn.addEventListener('click',()=>{
+   const d=dimensionConfig().find(x=>x.key===btn.dataset.dimKey),v=decodeURIComponent(btn.dataset.dimValue);
+   const rows=d.key==='purposeTag'?(v==='未分类'?b.filter(x=>!d.get(x).length):b.filter(x=>d.get(x).includes(v))):(v==='未分类'?b.filter(x=>!d.get(x).length):b.filter(x=>d.get(x).includes(v)));
+   addStickyPanel(btn,d.title+' · '+v,rows.slice().sort((a,z)=>String(z.time||'').localeCompare(String(a.time||''))));
+  }));
+ }
+ const baseSummary=window.renderCategorySummary;
+ window.renderCategorySummary=function(){if(baseSummary)baseSummary();renderDimensions();};
+ window.showCategoryDetails=function(encoded,direction){
+  const c=decodeURIComponent(encoded),b=rowsNow();
+  const rows=b.filter(x=>x.direction===direction&&(c==='冲销抵账'?isOffsetIncome(x):(c==='未分类'?(!x.category||x.category==='未分类'):x.category===c))).sort((a,z)=>String(z.time||'').localeCompare(String(a.time||'')));
+  const parent=$(direction==='收入'?'incomeCategorySummary':'expenseCategorySummary');if(!parent)return;
+  const trigger=[...parent.querySelectorAll('button')].find(x=>x.textContent.includes(c+'（'));if(!trigger)return;
+  addStickyPanel(trigger,c,rows);
+ };
+ document.addEventListener('click',e=>{const b=e.target.closest('[data-v22-open]');if(b){openBillDetail(b.dataset.v22Open);}});
+ // Purpose tags are stored as arrays; legacy single-string values remain readable.
+ function buildChecks(containerId,selectId,selected){
+  const select=$(selectId);if(!select)return;
+  let box=$(containerId);
+  if(!box){box=document.createElement('div');box.id=containerId;box.className='v22purpose-checks';select.insertAdjacentElement('afterend',box);}
+  select.style.display='none';select.multiple=true;
+  const values=Array.isArray(selected)?selected:(selected?[selected]:[]);
+  box.innerHTML='<small class="muted">可多选；不适用时可不选</small><div>'+PURPOSES.map(v=>'<label><input type="checkbox" value="'+E(v)+'" '+(values.includes(v)?'checked':'')+'><span>'+E(v)+'</span></label>').join('')+'</div>';
+  return box;
+ }
+ function checkedValues(id){return [...($(id)?.querySelectorAll('input[type=checkbox]:checked')||[])].map(x=>x.value);}
+ const oldOpenManual=window.openManualEntry;
+ if(oldOpenManual)window.openManualEntry=function(){oldOpenManual();const sel=$('manualPurpose');if(sel){buildChecks('manualPurposeMulti','manualPurpose',['日常消费']);}};
+ const oldParse=window.parseManualDescription;
+ if(oldParse)window.parseManualDescription=function(){oldParse();const sel=$('manualPurpose');if(sel)buildChecks('manualPurposeMulti','manualPurpose',[sel.value]);};
+ const oldSaveManual=window.saveManualEntry;
+ if(oldSaveManual)window.saveManualEntry=function(){
+  const tags=checkedValues('manualPurposeMulti'),before=new Set(getSavedBills().map(x=>x.id));
+  const sel=$('manualPurpose');if(sel)sel.value=tags[0]||'';
+  oldSaveManual();
+  const bills=getSavedBills(),added=bills.find(x=>!before.has(x.id));
+  if(added){added.purposeTag=tags;localStorage.setItem(WECHAT_STORE_KEY,JSON.stringify(bills));savedBillsCacheRaw=null;renderBills();renderHome();renderAnalysis();}
+ };
+ const oldOpenDetail=window.openBillDetail;
+ if(oldOpenDetail)window.openBillDetail=function(id){
+  oldOpenDetail(id);
+  const x=getSavedBills().find(v=>v.id===decodeURIComponent(id));if(!x)return;
+  const sel=$('detailPurpose');if(sel)buildChecks('detailPurposeMulti','detailPurpose',purposeTags(x));
+ };
+ const oldSaveDetail=window.saveBillNatureAndOwner;
+ if(oldSaveDetail)window.saveBillNatureAndOwner=function(){
+  const tags=checkedValues('detailPurposeMulti'),sel=$('detailPurpose');if(sel)sel.value=tags[0]||'';
+  oldSaveDetail();
+  const bills=getSavedBills(),x=bills.find(v=>v.id===activeBillId);
+  if(x){x.purposeTag=tags;localStorage.setItem(WECHAT_STORE_KEY,JSON.stringify(bills));savedBillsCacheRaw=null;renderBills();renderHome();renderAnalysis();openBillDetail(encodeURIComponent(activeBillId));}
+ };
+ function init(){
+  const nav=document.querySelector('nav.tabs');if(nav){['home','analysis','bills','mine'].forEach(id=>{const b=[...nav.querySelectorAll('button')].find(x=>(x.getAttribute('onclick')||'').includes("'"+id+"'"));if(b)nav.appendChild(b);});}
+  const style=document.createElement('style');
+  style.textContent='.v22expand{position:relative;background:#f7f9fc;border:1px solid #e8edf5;border-radius:10px;padding:8px;margin:4px 0 12px;overflow:visible}.category-sticky-head{position:-webkit-sticky;position:sticky;top:0;z-index:30;width:calc(100% + 16px);margin:-8px -8px 7px;padding:13px 12px;border:0;border-bottom:1px solid var(--line);border-radius:10px 10px 0 0;background:var(--card);color:var(--text);display:flex;justify-content:space-between;align-items:center;box-shadow:0 4px 12px #18223018;text-align:left;font-size:14px;font-weight:700}.v22row{display:flex;justify-content:space-between;align-items:center;gap:8px;text-align:left;width:100%;border:0;border-bottom:1px solid var(--line);background:var(--card);color:var(--text);padding:11px 4px;font-size:12px}.v22row small{display:block;color:var(--muted);line-height:1.5;margin-top:4px}.v22dimension-card{padding:4px 12px}.v22group{width:100%;display:flex;align-items:center;justify-content:space-between;gap:8px;text-align:left;padding:12px 0;border:0;border-bottom:1px solid var(--line);background:transparent;color:var(--text)}.v22group:last-child{border-bottom:0}.v22group>span:first-child{min-width:78px}.v22group small{display:block;color:var(--muted);font-size:11px;margin-top:4px}.v22amounts{text-align:right;font-size:12px;white-space:nowrap}.v22amounts small{font-size:11px}.v22purpose-checks{margin-top:8px}.v22purpose-checks>div{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:7px}.v22purpose-checks label{display:flex;align-items:center;gap:7px;padding:9px;border:1px solid var(--line);border-radius:9px;background:var(--card);font-size:13px}.v22purpose-checks input{width:17px;height:17px;accent-color:#3978f6}';
+  document.head.appendChild(style);
+  const billList=$('billList');if(billList)billList.style.display='none';
+  renderDimensions();
+ }
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 })();
 </script>
 
