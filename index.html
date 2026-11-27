@@ -2451,4 +2451,80 @@ body[data-theme="dark"] [id$="Modal"]>section:first-child>div:first-child{backgr
 })();
 </script>
 
+
+<script>
+/* MICROLEDGER_CATEGORY_DATA_SYNC_V1: 账单一级分类按本机「分类设置」同步；保留账单金额、时间、退款关联及其他字段 */
+(function(){
+  const SYNC_MARK='MICROLEDGER_CATEGORY_DATA_SYNC_V1';
+  const BACKUP_KEY='microledger_category_sync_backup_v1';
+  function readCanonical(){
+    let expense=[],income=[];
+    try{
+      const v3=JSON.parse(localStorage.getItem('expense_assistant_category_settings_v3')||'{}');
+      if(Array.isArray(v3.expense))expense=v3.expense.map(x=>String(x||'').trim()).filter(Boolean);
+      if(Array.isArray(v3.income))income=v3.income.map(x=>String(x||'').trim()).filter(x=>x&&x!=='冲销抵账');
+    }catch(e){}
+    if(!expense.length||!income.length){
+      try{
+        const old=JSON.parse(localStorage.getItem('expense_assistant_category_config_v1')||'{}');
+        if(!expense.length&&Array.isArray(old.expense))expense=old.expense.map(x=>String(x||'').trim()).filter(Boolean);
+        if(!income.length&&Array.isArray(old.income))income=old.income.map(x=>String(x||'').trim()).filter(x=>x&&x!=='冲销抵账');
+      }catch(e){}
+    }
+    return {expense:[...new Set(expense)],income:[...new Set(income)]};
+  }
+  const EXPENSE_ALIAS={
+    '餐饮':'餐饮美食','餐饮消费':'餐饮美食',
+    '居家生活':'居住生活','住房生活':'居住生活',
+    '购物':'购物消费','医疗':'医疗健康',
+    '娱乐':'休闲娱乐','教育':'育儿教育',
+    '人情往来':'人情社交','人情':'人情社交',
+    '其他':'其他支出'
+  };
+  const INCOME_ALIAS={'中奖':'其他收入','彩票中奖':'其他收入','中彩':'其他收入','其他':'其他收入','工资薪酬':'工资'};
+  function chooseCategory(old,list,aliases,fallback){
+    const value=String(old||'').trim();
+    if(list.includes(value))return value;
+    const alias=aliases[value];
+    if(alias&&list.includes(alias))return alias;
+    const normalized=value.replace(/[\s·_（）()\-]/g,'').toLowerCase();
+    const match=list.find(x=>x.replace(/[\s·_（）()\-]/g,'').toLowerCase()===normalized);
+    if(match)return match;
+    return list.includes(fallback)?fallback:(list[0]||value||'未分类');
+  }
+  function run(){
+    if(typeof getSavedBills!=='function')return;
+    const cats=readCanonical();
+    if(!cats.expense.length||!cats.income.length)return;
+    const bills=getSavedBills();
+    if(!Array.isArray(bills)||!bills.length)return;
+    let changed=0,expenseChanged=0,incomeChanged=0;
+    const next=bills.map(b=>{
+      if(!b||!['支出','收入'].includes(b.direction))return b;
+      const list=b.direction==='支出'?cats.expense:cats.income;
+      const aliases=b.direction==='支出'?EXPENSE_ALIAS:INCOME_ALIAS;
+      const fallback=b.direction==='支出'?'其他支出':'其他收入';
+      const before=String(b.category||'').trim();
+      const after=chooseCategory(before,list,aliases,fallback);
+      if(before!==after){changed++;if(b.direction==='支出')expenseChanged++;else incomeChanged++;return {...b,category:after};}
+      return b;
+    });
+    if(!changed)return;
+    try{
+      const snapshot={createdAt:new Date().toISOString(),marker:SYNC_MARK,expenseCategories:cats.expense,incomeCategories:cats.income,changed,expenseChanged,incomeChanged,bills};
+      const backups=JSON.parse(localStorage.getItem(BACKUP_KEY)||'[]');
+      backups.push(snapshot);
+      localStorage.setItem(BACKUP_KEY,JSON.stringify(backups.slice(-5)));
+      localStorage.setItem(WECHAT_STORE_KEY,JSON.stringify(next));
+      if(typeof savedBillsCacheRaw!=='undefined')savedBillsCacheRaw=null;
+      if(typeof getSavedBills==='function')getSavedBills();
+      console.info('[微账本分类同步]',{changed,expenseChanged,incomeChanged});
+      window.__microledgerCategorySyncResult={changed,expenseChanged,incomeChanged,categories:cats};
+    }catch(e){console.error('[微账本分类同步失败]',e);}
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',run,{once:true});
+  else run();
+})();
+</script>
+
 </body></html>
