@@ -160,7 +160,7 @@ body[data-theme="dark"] .category-sticky-head{background:#1f2937;color:#f3f4f6;b
 <div class="section"><h2>BI 数据分析</h2><span>基于本机已导入账单</span></div>
 <select id="biYear" style="display:none"><option value="">全部年份</option></select><select id="biMonth" style="display:none"><option value="">全部月份</option><option value="01">1月</option><option value="02">2月</option><option value="03">3月</option><option value="04">4月</option><option value="05">5月</option><option value="06">6月</option><option value="07">7月</option><option value="08">8月</option><option value="09">9月</option><option value="10">10月</option><option value="11">11月</option><option value="12">12月</option></select>
 <div class="stats"><div class="stat"><small>总收入</small><b id="biIncome">¥0.00</b></div><div class="stat"><small>总支出</small><b id="biExpense">¥0.00</b></div><div class="stat"><small>结余</small><b id="biBalance">¥0.00</b></div></div>
-<div class="stats"><div class="stat"><small>有交易日均支出</small><b id="biDaily">¥0.00</b></div><div class="stat"><small>交易笔数</small><b id="biCount">0</b></div><div class="stat"><small>最大单笔支出</small><b id="biMaxExpense">¥0.00</b></div></div>
+<div class="stats"><div class="stat"><small>日均支出（按自然日）</small><b id="biDaily">¥0.00</b></div><div class="stat"><small>交易笔数</small><b id="biCount">0</b></div><div class="stat"><small>最大单笔支出</small><b id="biMaxExpense">¥0.00</b></div></div>
 <div class="section"><h2>月度收支趋势</h2><span>按筛选结果统计</span></div><div class="card" id="biTrend"><p class="muted">暂无数据</p></div>
 <details class="card bi-filter-panel"><summary>其他筛选条件 <span>按需展开 / 收起　⌄</span></summary><div class="bi-filter-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px">
 <label class="muted">一级分类<select id="biCategory" onchange="renderAnalysis()" style="display:block;width:100%;padding:9px;border:1px solid var(--line);border-radius:8px;margin-top:5px"><option value="">全部分类</option></select></label>
@@ -169,11 +169,11 @@ body[data-theme="dark"] .category-sticky-head{background:#1f2937;color:#f3f4f6;b
 <label class="muted">最高金额<input id="biMax" type="number" min="0" placeholder="不限" oninput="renderAnalysis()" style="display:block;width:100%;padding:9px;border:1px solid var(--line);border-radius:8px;margin-top:5px"></label>
 <label class="muted" style="grid-column:1/-1">交易对象关键词<input id="biKeyword" type="search" placeholder="输入交易对象或商品关键词" oninput="renderAnalysis()" style="display:block;width:100%;padding:9px;border:1px solid var(--line);border-radius:8px;margin-top:5px"></label>
 <button onclick="resetAnalysisFilters()" style="grid-column:1/-1;border:0;background:#eef3ff;color:#3978f6;padding:10px;border-radius:9px">清空筛选条件</button></div></details>
-<div class="section"><h2>支出分类结构</h2><span>金额及占比</span></div><div class="card" id="biCategories"><p class="muted">暂无数据</p></div>
+<div class="section"><h2>支出分类结构</h2><span id="biExpenseCategoryCount">金额及占比</span></div><div class="card" id="biCategories"><p class="muted">暂无数据</p></div>
 <div class="section"><h2>收入分类结构</h2><span>金额及占比</span></div><div class="card" id="biIncomeCategories"><p class="muted">暂无数据</p></div>
 <div class="section"><h2>支出 TOP10</h2><span>单笔支出排行</span></div><div class="card" id="biTop"><p class="muted">暂无数据</p></div>
 <div class="section"><h2>收入 TOP10</h2><span>单笔收入排行（不含冲销抵账）</span></div><div class="card" id="biIncomeTop"><p class="muted">暂无数据</p></div>
-<div class="section"><h2>筛选后的账单明细</h2><span id="biFilteredCount">0 笔</span></div><div class="card" id="biDetails"><p class="muted">暂无数据</p></div>
+<div class="card" id="biDetails" style="display:none"><p class="muted">暂无数据</p></div>
 <p class="muted" style="line-height:1.7">说明：报表仅统计当前浏览器本机保存的数据；未分类账单会列入总收支，但不会计入具体分类。退款、转账及异常状态的专项口径仍需后续完善，分析结果请结合账单明细核对。</p>
 </section>
 <section id="mine" class="page"><div class="section"><h2>我的</h2><span>个人与数据设置</span></div><div class="card"><button type="button" class="tx" onclick="openBillFilePicker()" style="width:100%;border:0;background:transparent;text-align:left;cursor:pointer;padding:14px 0"><div class="icon">📥</div><div class="txmain"><b style="font-size:16px">账单数据导入</b><small>以微信支付账单为主；其他零散收支可手动补记</small></div><span style="font-size:22px;color:#3978f6">›</span></button>
@@ -536,7 +536,7 @@ function renderAnalysis(){
  te.innerHTML=top.length?top.map((x,i)=>'<div class="tx"><div class="icon">'+(i+1)+'</div><div class="txmain"><b>'+escapeHtml(x.counterparty||x.product||'未填写交易对象')+'</b><small>'+escapeHtml(x.time||'')+' · '+escapeHtml(x.category||'未分类')+'</small></div><div class="money">'+money(expenseNetAmount(x))+'</div></div>').join(''):'<p class="muted">暂无支出记录</p>';
  const incomeTop=data.filter(x=>x.direction==='收入'&&!isOffsetIncome(x)).sort((a,b)=>effectiveIncomeAmount(b)-effectiveIncomeAmount(a)).slice(0,10),ite=document.getElementById('biIncomeTop');
  ite.innerHTML=incomeTop.length?incomeTop.map((x,i)=>'<button type="button" data-bi-income-bill-id="'+encodeURIComponent(x.id)+'" style="width:100%;text-align:left;background:white;border:0;border-bottom:1px solid var(--line);padding:12px 0;display:flex;align-items:center;gap:10px"><span class="icon">'+(i+1)+'</span><span class="txmain" style="min-width:0"><b>'+escapeHtml(x.counterparty||x.product||'未填写交易对象')+'</b><small>'+escapeHtml(x.time||'')+' · '+escapeHtml(x.category||'未分类')+'</small></span><b class="money income">'+money(effectiveIncomeAmount(x))+'</b></button>').join(''):'<p class="muted">暂无收入记录</p>';
- set('biFilteredCount',data.length+' 笔');const de=document.getElementById('biDetails');
+ set('biFilteredCount',data.length+' 笔');const expenseBillCount=data.filter(x=>x.direction==='支出').length;set('biExpenseCategoryCount','共 '+expenseBillCount+' 笔 · 金额及占比');const de=document.getElementById('biDetails');
  de.innerHTML=data.slice().sort((a,b)=>String(b.time).localeCompare(String(a.time))).slice(0,100).map(x=>'<button type="button" data-bi-bill-id="'+encodeURIComponent(x.id)+'" style="width:100%;text-align:left;background:white;border:0;border-bottom:1px solid var(--line);padding:12px 0;display:flex;align-items:center;gap:10px;cursor:pointer"><span class="txmain" style="min-width:0"><b>'+escapeHtml(x.counterparty||x.product||'未填写交易对象')+'</b><small style="display:block">'+escapeHtml(x.time||'')+' · '+escapeHtml(x.category||'未分类')+' · '+escapeHtml(ownerOfV2(x))+'</small><small style="display:block;color:#3978f6;margin-top:4px">点击查看详情并修改分类/归属标签 ›</small></span><b class="money '+(x.direction==='收入'?'income':'')+'">'+(x.direction==='支出'?'-':x.direction==='收入'?'+':'')+money(x.amount)+'</b></button>').join('')||'<p class="muted">当前筛选条件下暂无账单</p>';
 }
 document.addEventListener('click',function(e){
@@ -1614,7 +1614,7 @@ function testRecognitionRules(){const text=String(document.getElementById('recog
  const modal=document.createElement('div');
  modal.id='aboutWeChatBookModal';
  modal.style.cssText='display:none;position:fixed;inset:0;z-index:1501;background:#10182899;padding:16px;box-sizing:border-box;align-items:center;justify-content:center';
- modal.innerHTML='<section style="width:min(560px,100%);max-height:78dvh;overflow:auto;background:var(--card);color:var(--text);border-radius:18px;padding:18px;box-sizing:border-box"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px;position:sticky;top:0;background:var(--card);padding-bottom:10px"><b style="font-size:18px">关于微账本</b><button type="button" onclick="closeAboutWeChatBook()" style="border:0;border-radius:20px;padding:8px 12px;min-height:40px">关闭</button></div><p style="line-height:1.8">微账本是一款以<strong>微信支付账单导入</strong>为主要使用场景的个人及家庭收支管理工具。开发它的初衷，是希望把日常分散在微信支付中的交易记录整理起来，让每一笔家庭开支更容易分类、查询和分析。</p><h3 style="font-size:15px">主要使用方式</h3><ul style="padding-left:20px;line-height:1.9"><li><b>微信账单为主：</b>可按月或按季度导入微信支付账单，系统辅助完成重复识别、分类和统计。</li><li><b>手动记账为补充：</b>现金消费、其他平台消费以及遗漏的零散收支，可通过手动记账补充。</li><li><b>统一分析：</b>将导入账单与手动记录汇总，查看个人及家庭的收支结构、消费归属和储蓄投资情况。</li></ul><h3 style="font-size:15px">适用范围与数据说明</h3><p style="line-height:1.8">微账本也可以记录其他来源的收支，但目前的导入、识别和整理流程主要围绕微信支付账单设计，并不代表已经适配所有支付平台或银行流水格式。账单数据保存在当前设备的浏览器中，不会自动同步到其他设备。更换设备或清理浏览器数据前，请先使用「备份与恢复」功能导出备份。</p><p class="muted" style="font-size:12px;line-height:1.7">本工具用于个人记账与消费分析，自动分类结果仅供参考，建议定期核对交易明细。</p></section>';
+ modal.innerHTML='<section style="width:min(560px,100%);max-height:78dvh;overflow:auto;background:var(--card);color:var(--text);border-radius:18px;padding:18px;box-sizing:border-box"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px;position:sticky;top:0;background:var(--card);padding-bottom:10px"><b style="font-size:18px">关于微账本</b><button type="button" onclick="closeAboutWeChatBook()" style="border:0;border-radius:20px;padding:8px 12px;min-height:40px">关闭</button></div><p style="line-height:1.8">微账本的开发初衷，是建立一套<strong>真正适合家庭长期使用的收支管理与财务分析工具</strong>，而不只是简单记录每天花了多少钱。以微信支付账单导入为主要入口，把分散的交易集中整理；再通过分类管理、手动补记和多维度标记，清楚回答每一笔钱从哪里来、花到哪里去、属于谁、用于什么，以及有多少转入储蓄和投资。最终通过BI报表观察家庭每月及全年收入、日常消费、储蓄投资和结余变化，为家庭预算、消费控制和长期资金规划提供依据。</p><h3 style="font-size:15px">产品希望解决的问题</h3><ul style="padding-left:20px;line-height:1.9"><li>把微信支付账单集中导入，减少重复手工录入。</li><li>对每笔交易进行一级分类，并标记交易性质、归属人、用途标签和支付方式。</li><li>区分本人、配偶、小孩和家庭共用的收支，了解家庭成员的收支结构。</li><li>把日常消费与储蓄投资分开，避免把账户间资金转移误认为消费。</li><li>通过月度、年度和分类趋势，持续观察家庭财务变化。</li></ul><h3 style="font-size:15px">主要使用方式</h3><ul style="padding-left:20px;line-height:1.9"><li><b>微信账单为主：</b>可按月或按季度导入微信支付账单，系统辅助完成重复识别、分类和统计。</li><li><b>手动记账为补充：</b>现金消费、其他平台消费以及遗漏的零散收支，可通过手动记账补充。</li><li><b>统一分析：</b>将导入账单与手动记录汇总，查看个人及家庭的收支结构、消费归属和储蓄投资情况。</li></ul><h3 style="font-size:15px">适用范围与数据说明</h3><p style="line-height:1.8">微账本也可以记录其他来源的收支，但目前的导入、识别和整理流程主要围绕微信支付账单设计，并不代表已经适配所有支付平台或银行流水格式。账单数据保存在当前设备的浏览器中，不会自动同步到其他设备。更换设备或清理浏览器数据前，请先使用「备份与恢复」功能导出备份。</p><p class="muted" style="font-size:12px;line-height:1.7">本工具用于个人记账与消费分析，自动分类结果仅供参考，建议定期核对交易明细。</p></section>';
  modal.addEventListener('click',e=>{if(e.target===modal)window.closeAboutWeChatBook();});
  document.body.appendChild(modal);
  window.openAboutWeChatBook=function(){modal.style.display='flex';};
@@ -1634,12 +1634,12 @@ function testRecognitionRules(){const text=String(document.getElementById('recog
  const moneyParts=rows=>{const a=amountParts(rows);return '日常支出 '+money(a.expense)+'　·　储蓄投资 '+money(a.savings)+'　·　收入 '+money(a.income);};
  const billRow=x=>'<button type="button" class="v22row" data-v22-open="'+encodeURIComponent(x.id)+'"><span><b>'+E(x.counterparty||x.product||'未填写交易对象')+'</b><small>'+E(x.time||'')+' · 一级分类：'+E(x.category||'未分类')+' · '+E(x.payment||'支付方式未填')+'</small><small>'+E('性质：'+(x.transactionNature||'未分类')+' · 归属：'+(x.owner||'未分类')+' · 用途：'+(purposeTags(x).join('、')||'未分类'))+'</small></span><b>查看并修改 ›</b></button>';
  function addStickyPanel(trigger,title,rows){
-  const parent=trigger.parentElement;
-  if(trigger.nextElementSibling&&trigger.nextElementSibling.classList.contains('v22expand')){trigger.nextElementSibling.remove();return;}
+  if(trigger.nextElementSibling&&trigger.nextElementSibling.classList.contains('v22expand')){trigger.nextElementSibling.remove();trigger.classList.remove('v22group-active');return;}
   document.querySelectorAll('.v22expand').forEach(n=>n.remove());
+  document.querySelectorAll('.v22group-active').forEach(n=>n.classList.remove('v22group-active'));
   const panel=document.createElement('div');panel.className='v22expand';
-  panel.innerHTML='<button type="button" class="category-sticky-head"><span>'+E(title)+'｜'+rows.length+'笔</span><span>收起 ▲</span></button>'+rows.map(billRow).join('')||'<p class="muted">该分类暂无账单。</p>';
-  panel.querySelector('.category-sticky-head').addEventListener('click',()=>panel.remove());
+  panel.innerHTML=rows.length?rows.map(billRow).join(''):'<p class="muted">该分类暂无账单。</p>';
+  trigger.classList.add('v22group-active');
   trigger.insertAdjacentElement('afterend',panel);
   panel.querySelectorAll('[data-v22-open]').forEach(b=>b.addEventListener('click',()=>openBillDetail(b.dataset.v22Open)));
  }
@@ -1717,7 +1717,7 @@ function testRecognitionRules(){const text=String(document.getElementById('recog
  function init(){
   const nav=document.querySelector('nav.tabs');if(nav){['home','analysis','bills','mine'].forEach(id=>{const b=[...nav.querySelectorAll('button')].find(x=>(x.getAttribute('onclick')||'').includes("'"+id+"'"));if(b)nav.appendChild(b);});}
   const style=document.createElement('style');
-  style.textContent='.v22expand{position:relative;background:#f7f9fc;border:1px solid #e8edf5;border-radius:10px;padding:8px;margin:4px 0 12px;overflow:visible}.category-sticky-head{position:-webkit-sticky;position:sticky;top:0;z-index:30;width:calc(100% + 16px);margin:-8px -8px 7px;padding:13px 12px;border:0;border-bottom:1px solid var(--line);border-radius:10px 10px 0 0;background:var(--card);color:var(--text);display:flex;justify-content:space-between;align-items:center;box-shadow:0 4px 12px #18223018;text-align:left;font-size:14px;font-weight:700}.v22row{display:flex;justify-content:space-between;align-items:center;gap:8px;text-align:left;width:100%;border:0;border-bottom:1px solid var(--line);background:var(--card);color:var(--text);padding:11px 4px;font-size:12px}.v22row small{display:block;color:var(--muted);line-height:1.5;margin-top:4px}.v22dimension-card{padding:4px 12px}.v22group{width:100%;display:flex;align-items:center;justify-content:space-between;gap:8px;text-align:left;padding:12px 0;border:0;border-bottom:1px solid var(--line);background:transparent;color:var(--text)}.v22group:last-child{border-bottom:0}.v22group>span:first-child{min-width:78px}.v22group small{display:block;color:var(--muted);font-size:11px;margin-top:4px}.v22amounts{text-align:right;font-size:12px;white-space:nowrap}.v22amounts small{font-size:11px}.v22purpose-checks{margin-top:8px}.v22purpose-checks>div{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:7px}.v22purpose-checks label{display:flex;align-items:center;gap:7px;padding:9px;border:1px solid var(--line);border-radius:9px;background:var(--card);font-size:13px}.v22purpose-checks input{width:17px;height:17px;accent-color:#3978f6}';
+  style.textContent='.v22expand{position:relative;background:transparent;border:0;border-radius:0;padding:0 0 4px;margin:0 0 10px;overflow:visible}.v22group-active{position:-webkit-sticky!important;position:sticky!important;top:0;z-index:35;background:var(--card)!important;border-bottom:1px solid var(--line)!important;box-shadow:0 3px 9px #18223012}.v22row{display:flex;justify-content:space-between;align-items:center;gap:8px;text-align:left;width:100%;border:0;border-bottom:1px solid var(--line);background:var(--card);color:var(--text);padding:11px 4px;font-size:12px}.v22row small{display:block;color:var(--muted);line-height:1.5;margin-top:4px}.v22dimension-card{padding:4px 12px}.v22group{width:100%;display:flex;align-items:center;justify-content:space-between;gap:8px;text-align:left;padding:12px 0;border:0;border-bottom:1px solid var(--line);background:transparent;color:var(--text)}.v22group:last-child{border-bottom:0}.v22group>span:first-child{min-width:78px}.v22group small{display:block;color:var(--muted);font-size:11px;margin-top:4px}.v22amounts{text-align:right;font-size:12px;white-space:nowrap}.v22amounts small{font-size:11px}.v22purpose-checks{margin-top:8px}.v22purpose-checks>div{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:7px}.v22purpose-checks label{display:flex;align-items:center;gap:7px;padding:9px;border:1px solid var(--line);border-radius:9px;background:var(--card);font-size:13px}.v22purpose-checks input{width:17px;height:17px;accent-color:#3978f6}';
   document.head.appendChild(style);
   const billList=$('billList');if(billList)billList.style.display='none';
   renderDimensions();
@@ -1996,4 +1996,61 @@ body[data-theme="dark"] [id$="Modal"]>section:first-child>div:first-child{backgr
 })();
 </script>
 
-</body></html>
+<script id="microledger-nine-fixes-v1">
+(function(){
+ const $=id=>document.getElementById(id);
+ const css=document.createElement('style');
+ css.textContent=[
+ '#manualPurposeMulti{grid-column:1/-1!important;width:100%;min-width:0;}',
+ '#manualPurposeMulti .v22purpose-checks>div{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;}',
+ '#manualPurposeMulti .v22purpose-checks label{min-height:42px;padding:8px 10px;box-sizing:border-box;min-width:0;}',
+ '#manualPurposeMulti .v22purpose-checks label span{line-height:1.35;overflow-wrap:anywhere;}',
+ '#manualPurposeMulti .v22purpose-checks input{flex:0 0 17px;margin:0;}',
+ '#home button[onclick="openManualEntry()"]{background:#d94848!important;box-shadow:0 5px 14px #d9484833!important;}',
+ '#homeSavingsAmount,#biSavingsAmount{color:#16a36a!important;}',
+ '#biIncome{color:#16a36a!important;}#biExpense{color:#e34b4b!important;}',
+ '#biDetails{display:none!important;}',
+ '.v22group-active{scroll-margin-top:env(safe-area-inset-top,0px);}'
+ ].join('');
+ document.head.appendChild(css);
+ // 中文数字金额解析：先找带金额单位的表达式，避免把日期中的“十月七号”误判成金额。
+ function cnNum(str){
+  str=String(str||'').replace(/[零〇]/g,'零').replace(/两/g,'二');
+  if(!str)return NaN;
+  if(/^\d[\d,]*(\.\d+)?$/.test(str))return Number(str.replace(/,/g,''));
+  const digit={零:0,一:1,二:2,三:3,四:4,五:5,六:6,七:7,八:8,九:9};
+  if(str.includes('点')){const p=str.split('点');if(p.length!==2)return NaN;const a=cnNum(p[0]||'零'),ds=[...p[1]].map(c=>digit[c]);if(ds.some(v=>v===undefined))return NaN;return a+Number('0.'+ds.join(''));}
+  let total=0,section=0,num=0;
+  for(const c of str){if(digit[c]!==undefined){num=digit[c];continue;}if(c==='十'){section+=(num||1)*10;num=0;}else if(c==='百'){section+=(num||1)*100;num=0;}else if(c==='千'){section+=(num||1)*1000;num=0;}else if(c==='万'){section+=num;total+=(section||1)*10000;section=0;num=0;}else if(c==='亿'){section+=num;total+=(section||1)*100000000;section=0;num=0;}else return NaN;}
+  return total+section+num;
+ }
+ function amountFromSpeech(t){
+  const text=String(t||'').replace(/，/g,',');let m,last=null;
+  const unitRe=/([零〇一二两三四五六七八九十百千万亿点\d,]+)\s*(元|圆|块钱|块)/g;
+  while((m=unitRe.exec(text))!==null){const v=cnNum(m[1]);if(Number.isFinite(v)&&v>0)last=v;}
+  if(last!==null)return last;
+  const cue=/(?:工资|收入|收到|到账|发了|转入|转账|支付|花了|消费|买了|金额|共计|一共)\s*[:：]?\s*[￥¥]?\s*([零〇一二两三四五六七八九十百千万亿点\d,]+)(?!月|日|号)/g;
+  while((m=cue.exec(text))!==null){const v=cnNum(m[1]);if(Number.isFinite(v)&&v>0)last=v;}
+  return last;
+ }
+ const parse=window.parseManualDescription;
+ if(typeof parse==='function')window.parseManualDescription=function(){
+  const text=$('manualVoiceText')?.value||'';parse();const value=amountFromSpeech(text);
+  if(value!==null&&Number.isFinite(value)&&$('manualAmount')){$('manualAmount').value=String(value);const hint=$('manualParseHint');if(hint)hint.textContent=hint.textContent.replace(/金额：[^；。]+/,'金额：'+value+'元')+'（金额已按中文数字重新识别，请核对）';}
+ };
+ // 分析页总收入、总支出、结余按金额语义着色；负结余使用黄色提醒。
+ function paintAnalysis(){
+  const inc=$('biIncome'),exp=$('biExpense'),bal=$('biBalance');
+  if(inc)inc.style.color='#16a36a';if(exp)exp.style.color='#e34b4b';
+  if(bal){const v=Number(String(bal.textContent||'').replace(/[^0-9.-]/g,''));bal.style.color=v<0?'#d99a16':'#16a36a';}
+ }
+ const render=window.renderAnalysis;
+ if(typeof render==='function')window.renderAnalysis=function(){render();paintAnalysis();};
+ const oldHome=window.renderHome;
+ if(typeof oldHome==='function')window.renderHome=function(){oldHome();const n=$('homeSavingsAmount');if(n)n.style.color='#16a36a';};
+ function updateExpenseCount(){const n=$('biExpenseCategoryCount');if(n){const rows=window.analysisFilteredBills||[];n.textContent='共 '+rows.filter(x=>x.direction==='支出').length+' 笔 · 金额及占比';}}
+ document.addEventListener('DOMContentLoaded',()=>{const b=$('aboutWeChatBookEntry');if(b){const sm=b.querySelector('small');if(sm)sm.textContent='产品初衷、家庭收支管理理念与数据说明';}paintAnalysis();updateExpenseCount();});
+ const target=$('biIncome')?.parentElement?.parentElement;
+ if(target)new MutationObserver(()=>{paintAnalysis();updateExpenseCount();}).observe(target,{childList:true,subtree:true,characterData:true});
+})();
+</script></body></html>
