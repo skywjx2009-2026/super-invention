@@ -282,10 +282,17 @@ async function readBillFile(){
  try{
   let rows=[];
   if(file.name.toLowerCase().endsWith('.csv')){
-   const text=await file.text();
-   const lines=text.replace(/^\\uFEFF/,'').split(/\\r?\\n/).filter(x=>x.trim());
-   const parseLine=line=>{let out=[],v='',q=false;for(let i=0;i<line.length;i++){const c=line[i];if(c==='"'&&line[i+1]==='"'&&q){v+='"';i++;}else if(c==='"'){q=!q;}else if(c===','&&!q){out.push(v);v='';}else v+=c;}out.push(v);return out;};
-   rows=lines.map(parseLine);
+   const bytes=await file.arrayBuffer(),u8=new Uint8Array(bytes);
+   let text='';
+   if(u8.length>=2&&u8[0]===0xFF&&u8[1]===0xFE)text=new TextDecoder('utf-16le').decode(u8);
+   else if(u8.length>=2&&u8[0]===0xFE&&u8[1]===0xFF)text=new TextDecoder('utf-16be').decode(u8);
+   else{
+    try{text=new TextDecoder('utf-8',{fatal:true}).decode(u8);}
+    catch(e){try{text=new TextDecoder('gb18030').decode(u8);}catch(e2){text=new TextDecoder('gbk').decode(u8);}}
+   }
+   text=text.replace(/^\\uFEFF/,'');
+   const parseCsv=source=>{const out=[],row=[];let value='',quoted=false;for(let i=0;i<source.length;i++){const c=source[i];if(c==='"'&&quoted&&source[i+1]==='"'){value+='"';i++;}else if(c==='"'){quoted=!quoted;}else if(c===','&&!quoted){row.push(value);value='';}else if((c==='\\n'||c==='\\r')&&!quoted){if(c==='\\r'&&source[i+1]==='\\n')i++;row.push(value);if(row.some(x=>String(x).trim()!==''))out.push(row.slice());row.length=0;value='';}else value+=c;}row.push(value);if(row.some(x=>String(x).trim()!==''))out.push(row);return out;};
+   rows=parseCsv(text);
   }else{
    if(!window.XLSX)throw new Error('Excel 解析组件加载失败，请检查网络后刷新网页重试。');
    const data=await file.arrayBuffer(),wb=XLSX.read(data,{type:'array'}),sheet=wb.Sheets[wb.SheetNames[0]];
@@ -341,6 +348,7 @@ function confirmImport(){
  let duplicateCount=0,invalidCount=0,ignoredCount=0;
  p.dataRows.forEach(r=>{
   const time=val(r,'time'),type=val(r,'type'),counterparty=val(r,'counterparty'),product=val(r,'product'),direction=val(r,'direction'),rawAmount=val(r,'amount');
+  if(direction==='不计收支'||direction.startsWith('不计收支')){ignoredCount++;return;}
   const amount=Number(rawAmount.replace(/[￥¥,，\\s元]/g,''));
   if(!time||!Number.isFinite(amount)||amount<=0||!['支出','收入'].includes(direction)){invalidCount++;return;}
   const category=val(r,'category'),remark=val(r,'remark'),account=val(r,'account'),sourceDetail=val(r,'sourceDetail'),tag=val(r,'tag');
@@ -358,11 +366,11 @@ function confirmImport(){
  const merged=existing.concat(added);
  try{localStorage.setItem(WECHAT_STORE_KEY,JSON.stringify(merged));}catch(e){alert('本机存储空间不足，未能保存全部账单。请减少导入范围或先备份数据。');return;}
  savedBillsCacheRaw=null;getSavedBills();renderHome();
- document.getElementById('importStatus').textContent='导入完成：新增 '+added.length+' 笔，重复跳过 '+duplicateCount+' 笔，无效/非收支记录 '+invalidCount+' 行。本机累计保存 '+merged.length+' 笔。';
+ document.getElementById('importStatus').textContent='导入完成：新增 '+added.length+' 笔，重复跳过 '+duplicateCount+' 笔，无效记录 '+invalidCount+' 行，不计收支跳过 '+ignoredCount+' 行。本机累计保存 '+merged.length+' 笔。';
  document.getElementById('importPreview').insertAdjacentHTML('beforeend','<p class="muted">已保存到当前浏览器本机。换设备或清除浏览器数据可能导致数据无法继续访问，请后续使用备份功能。</p>');
  renderBills();
- try{const history=readImportHistory();history.push({createdAt:new Date().toISOString(),importedAt:new Date().toLocaleString('zh-CN',{hour12:false}),fileName:p.fileName||'未命名文件',sourceRows:p.dataRows.length,added:added.length,skipped:duplicateCount,invalid:invalidCount,totalAfter:merged.length,sourceType:p.sourceType||'账单'});saveImportHistory(history);}catch(e){console.warn('导入历史记录保存失败',e);}
- alert('导入完成，新增 '+added.length+' 笔账单，重复跳过 '+duplicateCount+' 笔，无效/非收支记录 '+invalidCount+' 行。');
+ try{const history=readImportHistory();history.push({createdAt:new Date().toISOString(),importedAt:new Date().toLocaleString('zh-CN',{hour12:false}),fileName:p.fileName||'未命名文件',sourceRows:p.dataRows.length,added:added.length,skipped:duplicateCount,invalid:invalidCount,ignored:ignoredCount,totalAfter:merged.length,sourceType:p.sourceType||'账单'});saveImportHistory(history);}catch(e){console.warn('导入历史记录保存失败',e);}
+ alert('导入完成，新增 '+added.length+' 笔账单，重复跳过 '+duplicateCount+' 笔，无效记录 '+invalidCount+' 行，不计收支跳过 '+ignoredCount+' 行。');
 }const EXPENSE_CATEGORIES=['餐饮','交通出行','居家生活','购物','医疗健康','娱乐','教育','通讯数码','人情往来','其他'];
 const INCOME_CATEGORIES=['工资','奖金','理财收入','退款/报销','其他收入'];
 const SUBCATEGORIES={
