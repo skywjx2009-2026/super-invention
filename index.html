@@ -1501,4 +1501,24 @@ function testRecognitionRules(){const text=String(document.getElementById('recog
 })();
 </script>
 
+
+<script>
+/* 手动语音/文字记账：识别育儿基金、储蓄计划时自动填充交易性质、用途和归属，仍要求保存前人工核对。 */
+(function(){
+ const base=window.parseManualDescription;
+ window.parseManualDescription=function(){
+  if(base)base();
+  const t=String(document.getElementById('manualVoiceText')?.value||'').toLowerCase();
+  const child=/育儿基金|儿童基金|孩子基金|教育基金|教育储蓄|宝宝基金/.test(t);
+  const saving=child||/定期存款|定期储蓄|零存整取|基金定投|储蓄计划|存款计划/.test(t)||(/存入|转入/.test(t)&&/储蓄|存款|基金|教育金|育儿金/.test(t));
+  const nature=document.getElementById('manualNature'),owner=document.getElementById('manualOwner'),purpose=document.getElementById('manualPurpose'),category=document.getElementById('manualCategory');
+  if(saving&&nature){nature.value='储蓄投资';if(category&&[...category.options].some(o=>o.value==='金融保险'))category.value='金融保险';}
+  if(child&&owner)owner.value='小孩';
+  if(purpose)purpose.value=child?'育儿基金':saving?'储蓄规划':(/保险|保费|寿险|重疾险|意外险/.test(t)?'保险保障':(/基金|理财|证券|股票|投资/.test(t)?'理财投资':'日常消费'));
+  const hint=document.getElementById('manualParseHint');
+  if(saving&&hint)hint.textContent+=' 已识别为储蓄投资，请确认交易性质、分类和消费归属；该金额不会计入日常消费支出。';
+ };
+})();
+</script>
+
 </body></html>
