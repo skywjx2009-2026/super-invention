@@ -302,23 +302,42 @@ function confirmImport(){
  const p=window.pendingWechatRows;if(!p){alert('请先读取账单文件。');return;}
  const idx={};p.headers.forEach((h,i)=>idx[String(h).trim()]=i);
  const val=(r,k)=>{const i=idx[k];return i===undefined?'':String(r[i]??'').trim()};
- const existing=getSavedBills(), seen=new Set(existing.map(x=>x.id)), added=[];
- p.dataRows.forEach((r,n)=>{
-  const time=val(r,'交易时间'), type=val(r,'交易类型'), counterparty=val(r,'交易对方'), product=val(r,'商品'), direction=val(r,'收/支'), rawAmount=val(r,'金额(元)'), payment=val(r,'支付方式'), status=val(r,'当前状态'), tradeNo=val(r,'交易单号'), merchantNo=val(r,'商户单号'), remark=val(r,'备注');
-  const amount=Number(rawAmount.replace(/[￥¥,\s]/g,''));
-  if(!time||!Number.isFinite(amount))return;
-  const id=tradeNo||merchantNo||[time,type,counterparty,product,rawAmount].join('|');
-  if(seen.has(id))return;seen.add(id);
-  const bill={id,time,type,counterparty,product,direction,amount,payment,status,tradeNo,merchantNo,remark,category:'未分类',source:p.fileName};applySavedMerchantRulesToBill(bill);added.push(bill);
+ const existing=getSavedBills(),added=[];
+ /* 两层去重：先按微信交易单号/商户单号识别；无可用单号时，按全部账单信息字段精确比对。 */
+ const tradeNos=new Set(),merchantNos=new Set(),fullSignatures=new Set();
+ const norm=v=>String(v??'').trim();
+ const fullSignature=b=>JSON.stringify([
+  norm(b.time),norm(b.type),norm(b.counterparty),norm(b.product),norm(b.direction),
+  Number(b.amount),norm(b.payment),norm(b.status),norm(b.tradeNo),norm(b.merchantNo),norm(b.remark)
+ ]);
+ existing.forEach(b=>{
+  if(!b)return;
+  if(norm(b.tradeNo))tradeNos.add(norm(b.tradeNo));
+  if(norm(b.merchantNo))merchantNos.add(norm(b.merchantNo));
+  fullSignatures.add(fullSignature(b));
+ });
+ let duplicateCount=0,invalidCount=0;
+ p.dataRows.forEach(r=>{
+  const time=val(r,'交易时间'),type=val(r,'交易类型'),counterparty=val(r,'交易对方'),product=val(r,'商品'),direction=val(r,'收/支'),rawAmount=val(r,'金额(元)'),payment=val(r,'支付方式'),status=val(r,'当前状态'),tradeNo=val(r,'交易单号'),merchantNo=val(r,'商户单号'),remark=val(r,'备注');
+  const amount=Number(rawAmount.replace(/[￥¥,\\s]/g,''));
+  if(!time||!Number.isFinite(amount)){invalidCount++;return;}
+  const bill={id:'',time,type,counterparty,product,direction,amount,payment,status,tradeNo,merchantNo,remark,category:'未分类',source:p.fileName};
+  const signature=fullSignature(bill);
+  const duplicated=(tradeNo&&tradeNos.has(tradeNo))||(merchantNo&&merchantNos.has(merchantNo))||fullSignatures.has(signature);
+  if(duplicated){duplicateCount++;return;}
+  bill.id=tradeNo||merchantNo||('import_'+signature);
+  tradeNos.add(tradeNo);merchantNos.add(merchantNo);fullSignatures.add(signature);
+  applySavedMerchantRulesToBill(bill);added.push(bill);
  });
  const merged=existing.concat(added);
  try{localStorage.setItem(WECHAT_STORE_KEY,JSON.stringify(merged));}
  catch(e){alert('本机存储空间不足，未能保存全部账单。请减少导入范围或先备份数据。');return;}
- renderHome();document.getElementById('importStatus').textContent='导入完成：新增 '+added.length+' 笔，重复跳过 '+(p.dataRows.length-added.length)+' 行。本机累计保存 '+merged.length+' 笔。';
+ savedBillsCacheRaw=null;getSavedBills();
+ renderHome();document.getElementById('importStatus').textContent='导入完成：新增 '+added.length+' 笔，重复跳过 '+duplicateCount+' 笔'+(invalidCount?'，无效数据 '+invalidCount+' 行':'')+'。本机累计保存 '+merged.length+' 笔。';
  document.getElementById('importPreview').insertAdjacentHTML('beforeend','<p class="muted">已保存到当前浏览器本机。换设备或清除浏览器数据可能导致数据无法继续访问，请后续使用备份功能。</p>');
  renderBills();
- try{const history=readImportHistory();history.push({createdAt:new Date().toISOString(),importedAt:new Date().toLocaleString('zh-CN',{hour12:false}),fileName:p.fileName||'未命名文件',sourceRows:p.dataRows.length,added:added.length,skipped:p.dataRows.length-added.length,totalAfter:merged.length});saveImportHistory(history);}catch(e){console.warn('导入历史记录保存失败',e);}
- alert('导入完成，新增 '+added.length+' 笔账单。');
+ try{const history=readImportHistory();history.push({createdAt:new Date().toISOString(),importedAt:new Date().toLocaleString('zh-CN',{hour12:false}),fileName:p.fileName||'未命名文件',sourceRows:p.dataRows.length,added:added.length,skipped:duplicateCount,invalid:invalidCount,totalAfter:merged.length});saveImportHistory(history);}catch(e){console.warn('导入历史记录保存失败',e);}
+ alert('导入完成，新增 '+added.length+' 笔账单，重复跳过 '+duplicateCount+' 笔'+(invalidCount?'，无效数据 '+invalidCount+' 行':'')+'。');
 }
 const EXPENSE_CATEGORIES=['餐饮','交通出行','居家生活','购物','医疗健康','娱乐','教育','通讯数码','人情往来','其他'];
 const INCOME_CATEGORIES=['工资','奖金','理财收入','退款/报销','其他收入'];
