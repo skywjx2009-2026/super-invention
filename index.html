@@ -1968,6 +1968,7 @@ body[data-theme="dark"] [id$="Modal"]>section:first-child>div:first-child{backgr
   if(savingsNode)savingsNode.textContent=fmt(savings);
   const savingsCard=savingsNode?.closest('.card');
   const trendSection=$('homeTrend')?.previousElementSibling;
+  if(trendSection?.querySelector('span'))trendSection.querySelector('span').textContent='1—12月 · 点击月份筛选';
   if(savingsCard&&trendSection&&savingsCard!==trendSection.previousElementSibling)trendSection.insertAdjacentElement('beforebegin',savingsCard);
   const monthCard=$('homeYearTags')?.closest('.card');if(monthCard)monthCard.remove();
   ['homeCategories','homeIncomeCategories'].forEach(id=>{const el=$(id);if(el){const sec=el.previousElementSibling;if(sec)sec.remove();el.remove();}});
