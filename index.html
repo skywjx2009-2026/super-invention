@@ -1680,4 +1680,101 @@ function init(){
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();
 </script>
+
+<style id="modal-ux-unified-v1">
+/* 统一弹窗体验：视觉居中、限制高度、标题栏固定、内容区滚动 */
+[id$="Modal"]{
+ box-sizing:border-box!important;
+ padding: max(12px,env(safe-area-inset-top)) 12px max(12px,env(safe-area-inset-bottom))!important;
+ align-items:center!important;justify-content:center!important;
+ overflow:hidden!important;overscroll-behavior:contain;
+}
+[id$="Modal"]>div:first-child,[id$="Modal"]>section:first-child{
+ box-sizing:border-box!important;
+ width:min(560px,100%)!important;
+ max-height:calc(100dvh - max(24px,env(safe-area-inset-top) + env(safe-area-inset-bottom) + 24px))!important;
+ max-height:calc(100vh - 32px)!important;
+ overflow-y:auto!important;overflow-x:hidden!important;
+ overscroll-behavior:contain;-webkit-overflow-scrolling:touch;
+ margin:auto!important;min-height:0;
+}
+[id$="Modal"]>div:first-child>div:first-child,
+[id$="Modal"]>section:first-child>div:first-child{
+ position:sticky!important;top:-1px!important;z-index:20!important;
+ background:var(--card,#fff)!important;
+ padding-top:8px!important;padding-bottom:10px!important;
+ margin-top:-1px!important;
+ border-bottom:1px solid var(--line,#edf0f5);
+}
+#billDetailModal>div:first-child,
+#homeCategoryModal>div:first-child,
+#categorySettingsModalV3>div:first-child,
+#systemSettingsModal>div:first-child,
+#manualEntryModal>div:first-child,
+#refundOffsetManagerModal>div:first-child,
+#unifiedOffsetModal>div:first-child{border-radius:18px!important}
+#manualEntryModal{overflow:hidden!important}
+#manualEntryModal>div:first-child{width:min(520px,100%)!important;max-height:calc(100dvh - 32px)!important;overflow-y:auto!important}
+#manualEntryModal>div:first-child>div:first-child{top:-1px!important}
+body.modal-ux-locked{position:fixed!important;width:100%!important;overflow:hidden!important;left:0;right:0}
+body[data-theme="dark"] [id$="Modal"]>div:first-child>div:first-child,
+body[data-theme="dark"] [id$="Modal"]>section:first-child>div:first-child{background:#1e2938!important;border-bottom-color:#3b485b!important}
+@media(max-width:480px){
+ [id$="Modal"]>div:first-child,[id$="Modal"]>section:first-child{max-height:calc(100dvh - max(24px,env(safe-area-inset-top) + env(safe-area-inset-bottom) + 24px))!important}
+}
+</style>
+<script>
+/* 弹窗统一交互控制：锁定背景滚动；弹窗本身滚动；保留标题与关闭入口。 */
+(function(){
+ let savedY=0,locked=false,manualBaseline='',allowManualClose=false;
+ const modalSelector='[id$="Modal"]';
+ function visible(m){return !!m&&getComputedStyle(m).display!=='none';}
+ function panelOf(m){return m.querySelector(':scope > div:first-child,:scope > section:first-child');}
+ function lock(){
+  if(locked)return;savedY=window.scrollY||window.pageYOffset||0;locked=true;
+  document.body.dataset.modalUxScrollY=String(savedY);
+  document.body.classList.add('modal-ux-locked');
+  document.body.style.top=(-savedY)+'px';
+ }
+ function unlock(){
+  if(!locked)return;locked=false;document.body.classList.remove('modal-ux-locked');
+  document.body.style.top='';const y=Number(document.body.dataset.modalUxScrollY||savedY);
+  delete document.body.dataset.modalUxScrollY;window.scrollTo(0,y);
+ }
+ function sync(){
+  const open=[...document.querySelectorAll(modalSelector)].filter(visible);
+  open.forEach(m=>{
+   if(getComputedStyle(m).display!=='flex')m.style.display='flex';
+   const p=panelOf(m);if(p){p.style.maxHeight='calc(100dvh - 32px)';p.style.overflowY='auto';}
+  });
+  if(open.length)lock();else unlock();
+ }
+ const observer=new MutationObserver(sync);
+ function init(){
+  document.querySelectorAll(modalSelector).forEach(m=>observer.observe(m,{attributes:true,attributeFilter:['style','class']}));
+  sync();
+  window.addEventListener('resize',sync,{passive:true});
+  window.addEventListener('orientationchange',()=>setTimeout(sync,250),{passive:true});
+  const openManual=window.openManualEntry,closeManual=window.closeManualEntry,saveManual=window.saveManualEntry;
+  if(typeof openManual==='function')window.openManualEntry=function(){openManual();manualBaseline=manualSnapshot();sync();};
+  function manualSnapshot(){
+   const ids=['manualVoiceText','manualTime','manualDirection','manualAmount','manualCategory','manualPayment','manualRemark','manualNature','manualOwner','manualPurpose'];
+   return ids.map(id=>{const e=document.getElementById(id);return e?(e.type==='checkbox'?String(e.checked):String(e.value)):'<missing>';}).join('\u001f');
+  }
+  if(typeof closeManual==='function')window.closeManualEntry=function(){
+   if(!allowManualClose&&manualBaseline&&manualSnapshot()!==manualBaseline){
+    if(!confirm('当前手动记账内容尚未保存，确定放弃本次修改并关闭吗？'))return;
+   }
+   manualBaseline='';closeManual();sync();
+  };
+  if(typeof saveManual==='function')window.saveManualEntry=function(){
+   allowManualClose=true;try{saveManual();}finally{allowManualClose=false;sync();}
+  };
+  const originalOpen=window.openBillDetail;
+  if(typeof originalOpen==='function')window.openBillDetail=function(id){originalOpen(id);sync();};
+ }
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
+})();
+</script>
+
 </body></html>
