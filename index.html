@@ -1258,4 +1258,141 @@ function renderRecognitionRules(){
 function testRecognitionRules(){const text=String(document.getElementById('recognitionTestText').value||'').trim();if(!text)return alert('请先输入测试语句。');const r=getRecognitionRules(),out=[];for(const [key,label] of [['direction','收支类型'],['date','日期'],['category','分类'],['payment','支付方式']]){const hits=r[key].flatMap(x=>(x.keywords||[]).filter(k=>text.toLowerCase().includes(k.toLowerCase())).map(k=>({k,x}))).sort((a,b)=>b.k.length-a.k.length);if(key==='category'){const dirs=hits.filter(h=>!h.x.direction||h.x.direction===(out.find(x=>x.startsWith('收支类型：'))||'收支类型：支出').split('：')[1]);out.push(label+'：'+([...new Set(dirs.map(h=>h.x.value))].join('、')||'未识别'));}else out.push(label+'：'+([...new Set(hits.map(h=>h.x.value))].join('、')||'未识别'));}const amt=text.match(/\d+(?:,\d{3})*(?:\.\d{1,2})?\s*(?:元|块钱|块)?/);out.push('金额：'+(amt?amt[0]:'未识别'));document.getElementById('recognitionTestResult').textContent=out.join('\n')+'\n（仅测试，不会写入账单）';}
 </script>
 
+
+<script>
+/* V2.0 家庭记账分类标准：统一一级分类、消费归属标签，并在本机执行一次历史账单迁移。 */
+(function(){
+ const V2_KEY='expense_assistant_category_v2_migration_20261127';
+ const EXPENSE_V2=['餐饮美食','居住生活','交通出行','购物消费','育儿教育','医疗健康','休闲娱乐','人情社交','金融保险','其他支出'];
+ const INCOME_V2=['工资','奖金','理财收入','退款/报销','其他收入'];
+ const OWNER_V2=['本人','老婆','小孩','家庭共用','未指定'];
+ const CATEGORY_MAP={
+  '餐饮':'餐饮美食','餐饮美食':'餐饮美食',
+  '居家生活':'居住生活','居住生活':'居住生活',
+  '购物':'购物消费','通讯数码':'购物消费','购物消费':'购物消费',
+  '交通出行':'交通出行','医疗健康':'医疗健康',
+  '娱乐':'休闲娱乐','休闲娱乐':'休闲娱乐',
+  '教育':'育儿教育','育儿教育':'育儿教育',
+  '人情往来':'人情社交','人情社交':'人情社交',
+  '金融保险':'金融保险','其他':'其他支出','其他支出':'其他支出'
+ };
+ const RULES=[
+  ['育儿教育',['奶粉','尿不湿','纸尿裤','婴儿','宝宝','儿童','小孩','童装','早教','托育','幼儿园','育儿','玩具','绘本','儿童用品','母婴']],
+  ['医疗健康',['医院','诊所','药店','药房','药品','挂号','看病','体检','牙科','口腔','疫苗','医疗','门诊','住院']],
+  ['交通出行',['汽车保险','车险','交强险','商业险','加油','中国石油','中国石化','壳牌','充电桩','汽车充电','充电服务','停车','停车场','高速','通行费','滴滴','打车','出租车','地铁','公交','公交卡','汽车保养','汽车维修','洗车']],
+  ['金融保险',['人寿保险','寿险','百万医疗','重疾险','意外险','医疗保险','保险费','保险缴费','保单','理财','基金','证券','银行手续费']],
+  ['居住生活',['水费','电费','燃气','水电','物业','房租','房贷','宽带','网络费','话费','通信缴费','家庭日用品','纸巾','洗衣液','清洁用品','家政','维修','家具','家居','超市','便利店','生鲜','菜市场']],
+  ['餐饮美食',['早餐','午餐','晚餐','吃饭','餐饮','餐厅','饭店','外卖','美团外卖','饿了么','奶茶','咖啡','饮料','面包','蛋糕','零食','小吃','水果','火锅','烧烤']],
+  ['休闲娱乐',['电影','影院','演出','游戏','旅游','酒店','景区','门票','健身','运动','KTV','娱乐','休闲']],
+  ['人情社交',['红包','礼金','随礼','份子钱','婚礼','生日礼物','送礼','请客','聚会','人情']],
+  ['购物消费',['淘宝','天猫','京东','拼多多','抖音商城','网购','衣服','服饰','鞋','包包','化妆品','护肤品','数码','手机','电脑','家电','电器','百货','购物']]
+ ];
+ const textOf=b=>[b.counterparty,b.product,b.remark,b.type,b.status].map(x=>String(x||'')).join(' ').toLowerCase();
+ function inferCategory(b){
+  const t=textOf(b);
+  for(const [cat,words] of RULES){if(words.some(w=>t.includes(w.toLowerCase())))return cat;}
+  const old=CATEGORY_MAP[String(b.category||'').trim()];
+  return old||'其他支出';
+ }
+ function inferOwner(b){
+  const t=textOf(b);
+  if(/宝宝|婴儿|儿童|小孩|奶粉|尿不湿|纸尿裤|母婴|早教|幼儿园/.test(t))return '小孩';
+  if(/老婆|妻子|爱人|太太/.test(t))return '老婆';
+  if(/本人|自己/.test(t))return '本人';
+  const old=String(b.owner||'').trim();
+  if(old==='家庭公用'||old==='家庭共同'||old==='全家')return '家庭共用';
+  return OWNER_V2.includes(old)?old:'未指定';
+ }
+ function setExpenseCategories(){
+  EXPENSE_CATEGORIES.splice(0,EXPENSE_CATEGORIES.length,...EXPENSE_V2);
+  INCOME_CATEGORIES.splice(0,INCOME_CATEGORIES.length,...INCOME_V2);
+  if(!INCOME_CATEGORIES.includes('冲销抵账'))INCOME_CATEGORIES.push('冲销抵账');
+  Object.keys(SUBCATEGORIES||{}).forEach(k=>delete SUBCATEGORIES[k]);
+  saveCategoryConfig();
+  const settingsKey='expense_assistant_category_settings_v3';
+  localStorage.setItem(settingsKey,JSON.stringify({expense:EXPENSE_V2,income:[...INCOME_V2,'冲销抵账'],subcategories:OWNER_V2}));
+  localStorage.setItem('expense_assistant_global_subcategories_v1',JSON.stringify(OWNER_V2));
+ }
+ function normalizeMerchantRules(){
+  const rules=getMerchantRules();
+  rules.forEach(r=>{if(r&&r.category)r.category=CATEGORY_MAP[r.category]||r.category;if(r&&r.owner)r.owner=inferOwner({owner:r.owner,counterparty:r.counterparty});});
+  saveMerchantRules(rules);
+ }
+ function updateRecognitionRules(){
+  const r=getRecognitionRules();
+  r.category=[
+   {direction:'支出',value:'餐饮美食',keywords:['吃饭','早餐','午餐','晚餐','外卖','奶茶','咖啡','饮料','零食','水果','餐厅','饭店','餐饮']},
+   {direction:'支出',value:'居住生活',keywords:['水费','电费','燃气','物业','房租','房贷','日用品','超市','便利店','家政','维修','话费','宽带']},
+   {direction:'支出',value:'交通出行',keywords:['加油','汽车充电','充电桩','停车','高速','通行费','打车','滴滴','地铁','公交','车险','汽车保险','汽车保养','汽车维修']},
+   {direction:'支出',value:'购物消费',keywords:['衣服','买衣服','买鞋','鞋子','化妆品','护肤品','淘宝','京东','网购','数码','家电']},
+   {direction:'支出',value:'育儿教育',keywords:['宝宝','小孩','儿童','奶粉','尿不湿','纸尿裤','母婴','早教','幼儿园','玩具','绘本','学费','课程']},
+   {direction:'支出',value:'医疗健康',keywords:['医院','看病','药品','药店','体检','挂号','牙科','医疗']},
+   {direction:'支出',value:'休闲娱乐',keywords:['旅游','电影','游戏','健身','运动','门票','演出','娱乐']},
+   {direction:'支出',value:'人情社交',keywords:['红包','礼金','随礼','送礼','请客','聚会']},
+   {direction:'支出',value:'金融保险',keywords:['人寿保险','寿险','重疾险','意外险','保险缴费','保单','理财','基金']},
+   {direction:'支出',value:'其他支出',keywords:['其他支出']}
+  ];
+  localStorage.setItem(RECOGNITION_RULES_KEY,JSON.stringify(r));
+ }
+ function migrateBills(){
+  const bills=getSavedBills();
+  let expenseCount=0,ownerCount=0;
+  bills.forEach(b=>{
+   if(!b||b.direction!=='支出')return;
+   const next=inferCategory(b);
+   if(b.category!==next){b.category=next;expenseCount++;}
+   const owner=inferOwner(b);
+   if(b.owner!==owner){b.owner=owner;ownerCount++;}
+   if('subcategory' in b)delete b.subcategory;
+  });
+  bills.forEach(b=>{
+   if(b&&b.direction==='收入'&&b.category&&CATEGORY_MAP[b.category])b.category=CATEGORY_MAP[b.category];
+   if(b&&b.owner)b.owner=inferOwner(b);
+  });
+  localStorage.setItem(WECHAT_STORE_KEY,JSON.stringify(bills));
+  savedBillsCacheRaw=null;getSavedBills();
+  return {total:bills.length,expenseCount,ownerCount};
+ }
+ /* 后续导入新账单时，沿用同一分类规则；人工保存的商户规则优先。 */
+ window.applySavedMerchantRulesToBill=function(bill){
+  if(!bill)return false;
+  const name=String(bill.counterparty||'').trim(),rule=getMerchantRules().find(r=>r.counterparty===name);
+  if(rule&&rule.category){bill.category=CATEGORY_MAP[rule.category]||rule.category;bill.owner=inferOwner({owner:rule.owner,counterparty:name});return true;}
+  if(bill.direction==='支出'){bill.category=inferCategory(bill);bill.owner=inferOwner(bill);}
+  return true;
+ };
+ window.getGlobalSubcategories=function(){return OWNER_V2.slice();};
+ getGlobalSubcategories=function(){return OWNER_V2.slice();};
+ window.categorySettingsDataV3=function(){
+  setExpenseCategories();
+  return {expense:EXPENSE_V2.slice(),income:[...INCOME_V2,'冲销抵账'],subcategories:OWNER_V2.slice()};
+ };
+ categorySettingsDataV3=window.categorySettingsDataV3;
+ window.saveCategorySettingsV3=function(d){
+  const exp=[...new Set((d.expense||EXPENSE_V2).filter(x=>EXPENSE_V2.includes(x)))];
+  const inc=[...new Set((d.income||INCOME_V2).filter(x=>INCOME_V2.includes(x)))];
+  EXPENSE_CATEGORIES.splice(0,EXPENSE_CATEGORIES.length,...exp);
+  INCOME_CATEGORIES.splice(0,INCOME_CATEGORIES.length,...inc,'冲销抵账');
+  localStorage.setItem('expense_assistant_category_config_v1',JSON.stringify({expense:exp,income:INCOME_CATEGORIES,subcategories:{}}));
+  localStorage.setItem('expense_assistant_category_settings_v3',JSON.stringify({expense:exp,income:INCOME_CATEGORIES,subcategories:OWNER_V2}));
+  localStorage.setItem('expense_assistant_global_subcategories_v1',JSON.stringify(OWNER_V2));
+ };
+ saveCategorySettingsV3=window.saveCategorySettingsV3;
+ const already=localStorage.getItem(V2_KEY);
+ setExpenseCategories();
+ normalizeMerchantRules();
+ updateRecognitionRules();
+ if(!already){
+  const result=migrateBills();
+  localStorage.setItem(V2_KEY,JSON.stringify({completedAt:new Date().toISOString(),...result}));
+  if(typeof rememberCategoryUsage==='function')rememberCategoryUsage(getSavedBills());
+  if(typeof renderBills==='function')renderBills();
+  if(typeof renderCategorySummary==='function')renderCategorySummary();
+  if(typeof renderHome==='function')renderHome();
+  if(typeof renderAnalysis==='function')renderAnalysis();
+  setTimeout(()=>alert('V2.0 分类标准已启用。\n本机账单：'+result.total+' 笔\n重新归类支出：'+result.expenseCount+' 笔\n归属标签规范化：'+result.ownerCount+' 笔\n无法从交易信息判断具体归属的账单，已设为「未指定」。'),300);
+ }
+})();
+</script>
+
 </body></html>
