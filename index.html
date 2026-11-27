@@ -1749,9 +1749,17 @@ body[data-theme="dark"] [id$="Modal"]>section:first-child>div:first-child{backgr
   });
   if(open.length)lock();else unlock();
  }
- const observer=new MutationObserver(sync);
+ const observer=new MutationObserver(records=>{
+  records.forEach(rec=>rec.addedNodes.forEach(node=>{
+   if(node.nodeType!==1)return;
+   if(node.matches&&node.matches(modalSelector))observer.observe(node,{attributes:true,attributeFilter:['style','class']});
+   node.querySelectorAll&&node.querySelectorAll(modalSelector).forEach(m=>observer.observe(m,{attributes:true,attributeFilter:['style','class']}));
+  }));
+  sync();
+ });
  function init(){
   document.querySelectorAll(modalSelector).forEach(m=>observer.observe(m,{attributes:true,attributeFilter:['style','class']}));
+  observer.observe(document.body,{childList:true,subtree:true});
   sync();
   window.addEventListener('resize',sync,{passive:true});
   window.addEventListener('orientationchange',()=>setTimeout(sync,250),{passive:true});
