@@ -120,6 +120,9 @@ body[data-theme="dark"] #billDetailContent [data-category-tag="冲销抵账"][ar
 .manual-time-wrap{position:relative;display:flex;align-items:center;justify-content:flex-start;width:100%;height:44px;min-height:44px;max-height:44px;box-sizing:border-box;margin-top:6px;padding:0 10px;border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--text)}
 .manual-time-display{display:flex;align-items:center;justify-content:flex-start;width:100%;height:100%;font-size:14px;line-height:normal;text-align:left;pointer-events:none}
 #manualTime{position:absolute;inset:0;display:block;width:100%;height:100%;opacity:0;z-index:2;cursor:pointer}
+
+/* iOS Safari：表单控件字体小于16px时，聚焦可能自动放大页面。统一设置避免输入时视口缩放。 */
+input:not([type="checkbox"]):not([type="radio"]):not([type="file"]), select, textarea { font-size:16px !important; }
 </style></head>
 <body><main class="app">
 <header class="top"><h1>开支记账分析助手</h1><div class="appearance-switch" role="group" aria-label="页面外观"><button type="button" id="themeLightBtn" class="active" onclick="setAppTheme('light')">☀️ 亮色</button><button type="button" id="themeDarkBtn" onclick="setAppTheme('dark')">🌙 暗色</button></div></header>
