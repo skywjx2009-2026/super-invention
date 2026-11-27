@@ -1830,4 +1830,169 @@ body[data-theme="dark"] [id$="Modal"]>section:first-child>div:first-child{backgr
 })();
 </script>
 
+
+<script id="microledger-home-v3">
+/* 微账本整体优化：年度趋势、月度切换、消费分类趋势、首页布局及手动收入维度 */
+(function(){
+ const $=id=>document.getElementById(id);
+ const fmt=v=>typeof money==='function'?money(v):'¥'+Number(v||0).toFixed(2);
+ const esc=v=>typeof escapeHtml==='function'?escapeHtml(String(v)):String(v);
+ const currentYear=()=>new Date().getFullYear();
+ function ensureManualFields(){
+  const modal=$('manualEntryModal');
+  if(!modal)return;
+  const grid=modal.querySelector('div[style*="display:grid"]');
+  if(!grid)return;
+  const add=(id,label,html)=>{if($(id))return;grid.insertAdjacentHTML('beforeend','<label style="font-size:13px;min-width:0">'+label+html+'</label>');};
+  add('manualNature','交易性质','<div class="manual-select-wrap"><select id="manualNature" class="manual-field-control"><option value="日常收支">日常收支</option><option value="储蓄投资">储蓄投资</option></select></div>');
+  add('manualOwner','归属人','<div class="manual-select-wrap"><select id="manualOwner" class="manual-field-control"><option>本人</option><option>老婆</option><option>小孩</option><option>家庭共用</option><option>未指定</option></select></div>');
+  add('manualPurpose','用途标签','<div class="manual-select-wrap"><select id="manualPurpose" class="manual-field-control"><option>日常消费</option><option>储蓄规划</option><option>育儿基金</option><option>理财投资</option><option>保险保障</option><option>资金转移</option></select></div>');
+ }
+ function updateManualLabels(){
+  const owner=$('manualOwner');
+  if(owner){const label=owner.closest('label');if(label&&label.firstChild&&label.firstChild.nodeType===3)label.firstChild.textContent='归属人';}
+  const nature=$('manualNature');
+  if(nature){
+   const direction=$('manualDirection')?.value||'支出';
+   const savings=[...nature.options].find(o=>o.value==='储蓄投资');
+   if(savings)savings.disabled=direction==='收入';
+   if(direction==='收入'&&nature.value==='储蓄投资')nature.value='日常收支';
+  }
+ }
+ const priorOpen=window.openManualEntry;
+ if(typeof priorOpen==='function'){
+  window.openManualEntry=function(){
+   priorOpen();ensureManualFields();
+   if($('manualNature'))$('manualNature').value='日常收支';
+   if($('manualOwner'))$('manualOwner').value='未指定';
+   if($('manualPurpose'))$('manualPurpose').value='日常消费';
+   updateManualLabels();
+  };
+ }
+ $('manualDirection')?.addEventListener('change',updateManualLabels);
+ const priorSave=window.saveManualEntry;
+ if(typeof priorSave==='function'){
+  window.saveManualEntry=function(){
+   ensureManualFields();updateManualLabels();
+   const direction=$('manualDirection')?.value||'支出';
+   const nature=$('manualNature')?.value||'日常收支';
+   const owner=$('manualOwner')?.value||'未指定';
+   const purpose=$('manualPurpose')?.value||'';
+   if(direction==='收入'&&nature==='储蓄投资'){alert('收入记录暂不支持选择“储蓄投资”；投资资金转出请使用支出方向记录。');return;}
+   const before=new Set((typeof getSavedBills==='function'?getSavedBills():[]).map(x=>x.id));
+   priorSave();
+   const bills=typeof getSavedBills==='function'?getSavedBills():[];
+   const added=bills.find(x=>!before.has(x.id));
+   if(added){
+    added.transactionNature=nature;added.owner=owner;
+    if(purpose)added.purposeTag=Array.isArray(added.purposeTag)?[...new Set([...added.purposeTag,purpose])]:[purpose];
+    if(typeof saveBills==='function')saveBills(bills);
+    else if(typeof WECHAT_STORE_KEY!=='undefined')localStorage.setItem(WECHAT_STORE_KEY,JSON.stringify(bills));
+    if(typeof savedBillsCacheRaw!=='undefined')savedBillsCacheRaw=null;
+   }
+  };
+ }
+ const priorRender=window.renderHome;
+ function homeRows(){return typeof getSavedBills==='function'?getSavedBills():[];}
+ function dateKey(x){const d=typeof dateParts==='function'?dateParts(x.time):null;return d?{year:Number(d.year),month:Number(d.month),key:d.key}:null;}
+ function amount(x){return Number(x.amount||0);}
+ function incomeValue(x){return typeof effectiveIncomeAmount==='function'?effectiveIncomeAmount(x):amount(x);}
+ function expenseValue(x){return typeof expenseNetAmount==='function'?expenseNetAmount(x):amount(x);}
+ function offset(x){return typeof isOffsetIncome==='function'?isOffsetIncome(x):false;}
+ function monthlyData(year){
+  const out=Array.from({length:12},(_,i)=>({month:i+1,income:0,expense:0,savings:0,cats:{}}));
+  homeRows().forEach(x=>{
+   const d=dateKey(x);if(!d||d.year!==year)return;
+   const m=out[d.month-1];
+   if(x.direction==='收入'&&!offset(x))m.income+=incomeValue(x);
+   if(x.direction==='支出'){
+    if(x.transactionNature==='储蓄投资')m.savings+=amount(x);
+    else {m.expense+=expenseValue(x);const c=x.category||'未分类';m.cats[c]=(m.cats[c]||0)+expenseValue(x);}
+   }
+  });
+  return out;
+ }
+ function selectedRows(){
+  const y=Number(window.homeYear||currentYear()),m=window.m==null?null:Number(window.m);
+  return homeRows().filter(x=>{const d=dateKey(x);return d&&d.year===y&&(!m||d.month===m);});
+ }
+ function renderTrend(year,months){
+  const host=$('homeTrend');if(!host)return;
+  const max=Math.max(1,...months.flatMap(x=>[x.income,x.expense]));
+  host.innerHTML='<div class="bars home-year-bars">'+months.map(v=>{
+   const active=Number(window.m)===v.month;
+   const ih=Math.max(2,v.income/max*104),eh=Math.max(2,v.expense/max*104);
+   return '<button type="button" class="home-month-bar" data-home-year-month="'+v.month+'" aria-pressed="'+(active?'true':'false')+'" style="border:1px solid '+(active?'#3978f6':'transparent')+';background:'+(active?'#edf4ff':'transparent')+';border-radius:9px;padding:5px 2px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;min-width:0"><span style="display:flex;align-items:flex-end;gap:3px;height:108px"><i class="bar" style="height:'+ih+'px"></i><i class="bar out" style="height:'+eh+'px"></i></span><label style="font-size:10px;color:'+(active?'#245fc7':'var(--muted)')+';font-weight:'+(active?'700':'400')+'">'+v.month+'月</label></button>';
+  }).join('')+'</div><div class="legend"><span><i class="dot"></i>收入</span><span><i class="dot blue"></i>日常支出</span></div><p class="muted" style="font-size:11px;margin:8px 0 0">'+year+'年全年趋势；点击月份筛选，再点已选月份可恢复全年。</p>';
+ }
+ function renderCategoryTrend(year,months){
+  const host=$('homeCategoryTrend');if(!host)return;
+  const totals={};months.forEach(m=>Object.entries(m.cats).forEach(([c,v])=>totals[c]=(totals[c]||0)+v));
+  const cats=Object.entries(totals).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  if(!cats.length){host.innerHTML='<p class="muted">本年度暂无日常消费分类数据。</p>';return;}
+  const W=320,H=174,L=34,R=8,T=12,B=26,plotW=W-L-R,plotH=H-T-B;
+  const max=Math.max(1,...cats.flatMap(([c])=>months.map(m=>m.cats[c]||0)));
+  const colors=['#3978f6','#16a36a','#f59e0b','#8b5cf6','#ef665f'];
+  const y=v=>T+plotH-(v/max)*plotH,x=i=>L+i*plotW/11;
+  const grid=[0,.5,1].map(k=>'<line x1="'+L+'" y1="'+(T+plotH*k)+'" x2="'+(W-R)+'" y2="'+(T+plotH*k)+'" stroke="var(--line)" stroke-width="1"/>').join('');
+  const lines=cats.map(([c],idx)=>{
+   const pts=months.map((m,i)=>x(i)+','+y(m.cats[c]||0)).join(' ');
+   const dots=months.map((m,i)=>'<circle cx="'+x(i)+'" cy="'+y(m.cats[c]||0)+'" r="2.5" fill="'+colors[idx]+'"/>').join('');
+   return '<polyline fill="none" stroke="'+colors[idx]+'" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" points="'+pts+'"/>'+dots;
+  }).join('');
+  const labels=months.map((m,i)=>(i===0||i===2||i===4||i===6||i===8||i===10)?'<text x="'+x(i)+'" y="'+(H-6)+'" text-anchor="middle" font-size="9" fill="var(--muted)">'+(i+1)+'月</text>':'').join('');
+  const legend=cats.map(([c],i)=>'<span style="display:inline-flex;align-items:center;gap:5px;margin:5px 10px 0 0;font-size:11px;color:var(--muted)"><i style="width:8px;height:8px;border-radius:50%;background:'+colors[i]+'"></i>'+esc(c)+'</span>').join('');
+  host.innerHTML='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+year+'年消费分类月度趋势" style="display:block;width:100%;height:auto;overflow:visible">'+grid+lines+labels+'</svg><div>'+legend+'</div><p class="muted" style="font-size:11px;margin:7px 0 0">按全年支出金额排名展示前5类；退款按关联规则冲减净支出。储蓄投资不计入消费趋势。</p>';
+ }
+ function renderHomeV3(){
+  if(typeof priorRender==='function')priorRender();
+  const now=currentYear();
+  if(!window.homeMonthInitialized){window.homeYear=now;window.m=new Date().getMonth()+1;window.homeMonthInitialized=true;}
+  // 首页月份选择固定在当前年度；全年视图为1—12月。
+  if(!window.homeYear)window.homeYear=now;
+  const year=Number(window.homeYear),month=window.m==null?null:Number(window.m);
+  const rows=selectedRows(),income=rows.filter(x=>x.direction==='收入'&&!offset(x)).reduce((n,x)=>n+incomeValue(x),0);
+  const dailyExpense=rows.filter(x=>x.direction==='支出'&&x.transactionNature!=='储蓄投资').reduce((n,x)=>n+expenseValue(x),0);
+  const savings=rows.filter(x=>x.direction==='支出'&&x.transactionNature==='储蓄投资').reduce((n,x)=>n+amount(x),0);
+  const put=(id,v)=>{if($(id))$(id).textContent=v;};
+  put('homeExpenseLabel',(month?year+'年'+month+'月':'全年')+'日常支出');
+  put('homeIncomeLabel',(month?year+'年'+month+'月':'全年')+'收入');
+  put('expense',fmt(dailyExpense));put('homeIncome',fmt(income));put('homeBalance',fmt(income-dailyExpense-savings));
+  const days=month?new Date(year,month,0).getDate():(year%4===0&&(year%100!==0||year%400===0)?366:365);
+  put('homeDaily',fmt(days?dailyExpense/days:0));put('homeCount',rows.length+' 笔');
+  put('homeMax',fmt(Math.max(0,...rows.filter(x=>x.direction==='支出'&&x.transactionNature!=='储蓄投资').map(expenseValue))));
+  put('homeRatio',income>0?'日常支出占收入 '+(dailyExpense/income*100).toFixed(1)+'%':(rows.length?'暂无收入记录':'暂无账单数据'));
+  const months=monthlyData(year);
+  renderTrend(year,months);renderCategoryTrend(year,months);
+  const savingsNode=$('homeSavingsAmount');
+  if(savingsNode)savingsNode.textContent=fmt(savings);
+  const savingsCard=savingsNode?.closest('.card');
+  const trendSection=$('homeTrend')?.previousElementSibling;
+  if(savingsCard&&trendSection&&savingsCard!==trendSection.previousElementSibling)trendSection.insertAdjacentElement('beforebegin',savingsCard);
+  const monthCard=$('homeYearTags')?.closest('.card');if(monthCard)monthCard.remove();
+  ['homeCategories','homeIncomeCategories'].forEach(id=>{const el=$(id);if(el){const sec=el.previousElementSibling;if(sec)sec.remove();el.remove();}});
+  if(!$('homeCategoryTrend')){
+   const sec=document.createElement('div');sec.className='section';sec.innerHTML='<h2>消费分类趋势</h2><span>'+year+'年 · 月度变化</span>';
+   const card=document.createElement('div');card.className='card';card.id='homeCategoryTrend';
+   $('homeTrend')?.insertAdjacentElement('afterend',card);$('homeTrend')?.insertAdjacentElement('afterend',sec);
+  }
+  // 增大首页记账入口，保持整行可点击。
+  const entry=$('home')?.querySelector('button[onclick="openManualEntry()"]');
+  if(entry){entry.style.padding='18px';entry.style.fontSize='17px';entry.style.borderRadius='15px';entry.style.minHeight='58px';}
+ }
+ window.renderHome=renderHomeV3;
+ window.setHomeCurrentMonth=function(){window.homeYear=currentYear();window.m=new Date().getMonth()+1;window.homeMonthInitialized=true;renderHomeV3();};
+ document.addEventListener('click',e=>{
+  const b=e.target.closest('[data-home-year-month]');if(!b)return;
+  const n=Number(b.dataset.homeYearMonth),year=currentYear();
+  window.homeYear=year;window.m=Number(window.m)===n?null:n;window.homeMonthInitialized=true;renderHomeV3();
+ });
+ const style=document.createElement('style');
+ style.textContent='.home-year-bars{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:1px;align-items:end;height:145px;padding-left:0;padding-right:0}.home-month-bar{height:100%;min-width:0}.home-month-bar .bar{width:8px;max-width:40%}.home-month-bar label{white-space:nowrap}.home-month-bar[aria-pressed="true"]{box-shadow:0 0 0 1px #3978f655}#homeCategoryTrend{padding:12px 10px}';
+  document.head.appendChild(style);
+ function init(){ensureManualFields();updateManualLabels();renderHomeV3();}
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
+})();
+</script>
+
 </body></html>
