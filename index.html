@@ -1913,14 +1913,14 @@ body[data-theme="dark"] [id$="Modal"]>section:first-child>div:first-child{backgr
   return out;
  }
  function selectedRows(){
-  const y=Number(window.homeYear||currentYear()),m=window.m==null?null:Number(window.m);
-  return homeRows().filter(x=>{const d=dateKey(x);return d&&d.year===y&&(!m||d.month===m);});
+  const y=Number(homeYear||currentYear()),m=window.m==null?null:Number(window.m);
+  return homeRows().filter(x=>{const d=dateKey(x);return d&&d.year===y&&(!selectedMonth||d.month===selectedMonth);});
  }
  function renderTrend(year,months){
   const host=$('homeTrend');if(!host)return;
   const max=Math.max(1,...months.flatMap(x=>[x.income,x.expense]));
   host.innerHTML='<div class="bars home-year-bars">'+months.map(v=>{
-   const active=Number(window.m)===v.month;
+   const active=Number(m)===v.month;
    const ih=Math.max(2,v.income/max*104),eh=Math.max(2,v.expense/max*104);
    return '<button type="button" class="home-month-bar" data-home-year-month="'+v.month+'" aria-pressed="'+(active?'true':'false')+'" style="border:1px solid '+(active?'#3978f6':'transparent')+';background:'+(active?'#edf4ff':'transparent')+';border-radius:9px;padding:5px 2px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;min-width:0"><span style="display:flex;align-items:flex-end;gap:3px;height:108px"><i class="bar" style="height:'+ih+'px"></i><i class="bar out" style="height:'+eh+'px"></i></span><label style="font-size:10px;color:'+(active?'#245fc7':'var(--muted)')+';font-weight:'+(active?'700':'400')+'">'+v.month+'月</label></button>';
   }).join('')+'</div><div class="legend"><span><i class="dot"></i>收入</span><span><i class="dot blue"></i>日常支出</span></div><p class="muted" style="font-size:11px;margin:8px 0 0">'+year+'年全年趋势；点击月份筛选，再点已选月份可恢复全年。</p>';
@@ -1949,8 +1949,8 @@ body[data-theme="dark"] [id$="Modal"]>section:first-child>div:first-child{backgr
   const now=currentYear();
   if(!window.homeMonthInitialized){window.homeYear=now;window.m=new Date().getMonth()+1;window.homeMonthInitialized=true;}
   // 首页月份选择固定在当前年度；全年视图为1—12月。
-  if(!window.homeYear)window.homeYear=now;
-  const year=Number(window.homeYear),month=window.m==null?null:Number(window.m);
+  if(!homeYear)homeYear=now;
+  const year=Number(homeYear),month=m==null?null:Number(m);
   const rows=selectedRows(),income=rows.filter(x=>x.direction==='收入'&&!offset(x)).reduce((n,x)=>n+incomeValue(x),0);
   const dailyExpense=rows.filter(x=>x.direction==='支出'&&x.transactionNature!=='储蓄投资').reduce((n,x)=>n+expenseValue(x),0);
   const savings=rows.filter(x=>x.direction==='支出'&&x.transactionNature==='储蓄投资').reduce((n,x)=>n+amount(x),0);
@@ -1981,11 +1981,11 @@ body[data-theme="dark"] [id$="Modal"]>section:first-child>div:first-child{backgr
   if(entry){entry.style.padding='18px';entry.style.fontSize='17px';entry.style.borderRadius='15px';entry.style.minHeight='58px';}
  }
  window.renderHome=renderHomeV3;
- window.setHomeCurrentMonth=function(){window.homeYear=currentYear();window.m=new Date().getMonth()+1;window.homeMonthInitialized=true;renderHomeV3();};
+ window.setHomeCurrentMonth=function(){homeYear=currentYear();m=new Date().getMonth()+1;window.homeMonthInitialized=true;renderHomeV3();};
  document.addEventListener('click',e=>{
   const b=e.target.closest('[data-home-year-month]');if(!b)return;
   const n=Number(b.dataset.homeYearMonth),year=currentYear();
-  window.homeYear=year;window.m=Number(window.m)===n?null:n;window.homeMonthInitialized=true;renderHomeV3();
+  homeYear=year;m=Number(m)===n?null:n;window.homeMonthInitialized=true;renderHomeV3();
  });
  const style=document.createElement('style');
  style.textContent='.home-year-bars{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:1px;align-items:end;height:145px;padding-left:0;padding-right:0}.home-month-bar{height:100%;min-width:0}.home-month-bar .bar{width:8px;max-width:40%}.home-month-bar label{white-space:nowrap}.home-month-bar[aria-pressed="true"]{box-shadow:0 0 0 1px #3978f655}#homeCategoryTrend{padding:12px 10px}';
