@@ -2106,4 +2106,144 @@ body[data-theme="dark"] [id$="Modal"]>section:first-child>div:first-child{backgr
   };
 })();
 </script>
+
+<script>
+/* MICROLEDGER_OFFSET_V2: 原始支出发起冲销、双边标红、净支出统计、iOS固定导航 */
+(function(){
+  const style=document.createElement('style');
+  style.id='microledger-offset-v2-style';
+  style.textContent=[
+    '.tabs{position:fixed!important;left:0!important;right:0!important;bottom:0!important;top:auto!important;width:min(560px,100%)!important;margin:0 auto!important;transform:none!important;-webkit-transform:none!important;z-index:99999!important;padding-bottom:calc(10px + env(safe-area-inset-bottom))!important;will-change:auto!important;}',
+    'body{padding-bottom:0!important;}',
+    '.offset-linked-row{border:1.5px solid #d93025!important;border-radius:10px!important;padding:10px!important;margin:6px 0!important;background:#fffafa!important;}',
+    '.offset-linked-row b,.offset-linked-row .offset-mark{color:#c62828!important;}',
+    '.offset-state{display:inline-block;color:#c62828;background:#fff0ef;border:1px solid #f3b5b1;border-radius:6px;padding:2px 7px;font-size:11px;font-weight:700;margin:4px 0;}',
+    '#billDetailContent .offset-panel{border:1.5px solid #d93025;background:#fffafa;border-radius:12px;padding:12px;margin:12px 0;}',
+    '#billDetailContent .offset-panel button{border:0;border-radius:9px;padding:11px 13px;font-weight:650;}',
+    '#billDetailContent .offset-panel select{width:100%;padding:11px;border:1px solid var(--line);border-radius:9px;background:white;margin:8px 0;}'
+  ].join('');
+  document.head.appendChild(style);
+
+  function fmt(x){return money(Number(x||0));}
+  function linkedRefunds(expenseId){return getSavedBills().filter(b=>b.direction==='收入'&&String(b.refundForId||'')===String(expenseId));}
+  function offsetState(expense){
+    const amount=Number(expense.amount||0),used=refundLinkedAmount(expense.id);
+    return {amount,used,net:Math.max(0,amount-used),status:used<=0?'未冲销':used+0.000001>=amount?'全额冲销':'部分冲销'};
+  }
+  function refreshAllOffsetViews(){
+    renderBills();renderCategorySummary();renderHome();renderAnalysis();
+  }
+
+  // 账单详情：支出端提供“冲销抵账”入口；收入端显示其对应原支出。
+  const baseOpenBillDetail=window.openBillDetail;
+  if(typeof baseOpenBillDetail==='function'){
+    window.openBillDetail=function(encodedId){
+      baseOpenBillDetail(encodedId);
+      const id=decodeURIComponent(encodedId),bills=getSavedBills(),bill=bills.find(x=>String(x.id)===id),box=document.getElementById('billDetailContent');
+      if(!bill||!box)return;
+      let html='';
+      if(bill.direction==='支出'){
+        const st=offsetState(bill),linked=linkedRefunds(bill.id);
+        const linkedHtml=linked.map(r=>'<div style="padding:7px 0;border-top:1px solid #f1c5c2"><b>收入：'+escapeHtml(String(r.counterparty||r.product||'退款收入'))+' · '+fmt(r.amount)+'</b><div class="muted">'+escapeHtml(String(r.time||''))+' · '+escapeHtml(String(r.category||'未分类'))+'</div><button type="button" onclick="unlinkRefundFromExpense(\''+encodeURIComponent(r.id)+'\')" style="margin-top:5px;background:#fff0ef;color:#c62828">解除这笔关联</button></div>').join('');
+        html='<section class="offset-panel"><div class="offset-state">冲销状态：'+st.status+'</div><div style="line-height:1.9">原始支出：<b>'+fmt(st.amount)+'</b><br>已冲销金额：<b style="color:#c62828">'+fmt(st.used)+'</b><br>实际支出：<b style="font-size:20px">'+fmt(st.net)+'</b></div>'+linkedHtml+'<button type="button" onclick="showExpenseOffsetPicker(\''+encodeURIComponent(bill.id)+'\')" style="width:100%;margin-top:10px;background:#c62828;color:white">＋ 冲销抵账 / 关联退款收入</button></section>';
+      }else if(bill.direction==='收入'&&bill.refundForId){
+        const expense=bills.find(x=>String(x.id)===String(bill.refundForId));
+        html='<section class="offset-panel"><span class="offset-state">已关联冲销</span><div style="line-height:1.8">本笔冲销收入：<b>'+fmt(bill.amount)+'</b><br>关联原始支出：<b>'+(expense?escapeHtml(String(expense.counterparty||expense.product||'支出记录'))+' · '+fmt(expense.amount):'原始支出记录不存在')+'</b>'+(expense?'<br>该笔支出冲销后余额：<b>'+fmt(expenseNetAmount(expense))+'</b>':'')+'</div><button type="button" onclick="unlinkRefund(\''+encodeURIComponent(bill.id)+'\')" style="margin-top:8px;background:#fff0ef;color:#c62828">解除冲销关联</button></section>';
+      }
+      if(html)box.insertAdjacentHTML('beforeend',html);
+    };
+  }
+
+  window.showExpenseOffsetPicker=function(encodedExpenseId){
+    const expenseId=decodeURIComponent(encodedExpenseId),expense=getSavedBills().find(x=>String(x.id)===expenseId);
+    if(!expense||expense.direction!=='支出')return alert('只能从原始支出记录发起冲销。');
+    const remain=refundRemaining(expense);
+    if(remain<=0.000001)return alert('这笔支出已经全额冲销，无剩余可冲销金额。');
+    const candidates=getSavedBills().filter(x=>x.direction==='收入'&&!x.refundForId&&Number(x.amount)>0&&refundDateValue(expense)<=refundDateValue(x)&&Number(x.amount)<=remain+0.000001).sort((a,b)=>refundDateValue(b).localeCompare(refundDateValue(a)));
+    const box=document.getElementById('billDetailContent'),opts=candidates.map(x=>'<option value="'+encodeURIComponent(x.id)+'">'+escapeHtml(String(x.time||''))+'｜'+escapeHtml(String(x.counterparty||x.product||'未填写对象'))+'｜'+escapeHtml(String(x.category||'未分类'))+'｜收入 '+fmt(x.amount)+'</option>').join('');
+    const old=document.getElementById('expenseOffsetPicker');if(old)old.remove();
+    const panel=document.createElement('div');panel.id='expenseOffsetPicker';panel.className='offset-panel';
+    panel.innerHTML='<b style="color:#c62828">选择对应的退款/报销收入</b><p class="muted" style="line-height:1.6">原始支出 '+fmt(expense.amount)+'；目前剩余可冲销 '+fmt(remain)+'。系统只列出未关联且金额不超过剩余可冲销金额的收入记录，不会自动匹配。</p>'+(opts?'<select id="expenseOffsetIncomeSelect">'+opts+'</select><button type="button" onclick="confirmExpenseOffset(\''+encodeURIComponent(expense.id)+'\')" style="width:100%;background:#c62828;color:white">确认建立关联</button>':'<p class="muted">没有符合条件的未关联收入记录。请先确认退款收入已经导入，且收入日期不早于原始支出。</p>')+'<button type="button" onclick="document.getElementById(\'expenseOffsetPicker\').remove()" style="width:100%;margin-top:8px;background:#f1f3f5;color:#475467">取消</button>';
+    box.appendChild(panel);panel.scrollIntoView({behavior:'smooth',block:'nearest'});
+  };
+
+  window.confirmExpenseOffset=function(encodedExpenseId){
+    const expenseId=decodeURIComponent(encodedExpenseId),bills=getSavedBills(),expense=bills.find(x=>String(x.id)===expenseId),select=document.getElementById('expenseOffsetIncomeSelect'),incomeId=select?decodeURIComponent(select.value):'',income=bills.find(x=>String(x.id)===incomeId);
+    if(!expense||expense.direction!=='支出'||!income||income.direction!=='收入'||income.refundForId)return alert('记录状态已变化，请重新打开详情后操作。');
+    if(refundDateValue(expense)>refundDateValue(income))return alert('退款收入日期不能早于原始支出日期。');
+    if(Number(income.amount)<=0||Number(income.amount)>refundRemaining(expense)+0.000001)return alert('收入金额超过这笔支出的剩余可冲销金额，请核对后再操作。');
+    if(!confirm('确认关联这笔收入 '+fmt(income.amount)+' 到原始支出 '+fmt(expense.amount)+'？关联后实际支出为 '+fmt(expenseNetAmount(expense)-0+Number(income.amount)*0-income.amount)+'。'))return;
+    income.refundForId=expense.id;income.refundLinkStatus='confirmed';
+    try{localStorage.setItem(WECHAT_STORE_KEY,JSON.stringify(bills));savedBillsCacheRaw=null;getSavedBills();}
+    catch(e){return alert('保存失败：'+(e&&e.message?e.message:'本机存储异常'));}
+    refreshAllOffsetViews();openBillDetail(encodeURIComponent(expense.id));
+    alert('冲销关联已建立。原始账单金额未修改，实际支出已按关联金额重新计算。');
+  };
+
+  window.unlinkRefundFromExpense=function(encodedIncomeId){
+    const id=decodeURIComponent(encodedIncomeId),bills=getSavedBills(),income=bills.find(x=>String(x.id)===id);
+    if(!income||!income.refundForId)return;
+    if(!confirm('确定解除这笔冲销关联吗？两笔原始账单都会保留。'))return;
+    delete income.refundForId;delete income.refundLinkStatus;
+    localStorage.setItem(WECHAT_STORE_KEY,JSON.stringify(bills));savedBillsCacheRaw=null;getSavedBills();
+    refreshAllOffsetViews();const expense=bills.find(x=>x.direction==='支出'&&x.id===income.refundForId); // 原关联已清除，详情由用户重新打开即可
+    if(activeBillId)openBillDetail(encodeURIComponent(activeBillId));
+  };
+
+  // 账单列表两端均用红框提示已建立冲销关系。
+  window.renderBills=function(){
+    const list=document.getElementById('billList');if(!list)return;
+    const bills=getSavedBills().slice().sort((a,b)=>String(b.time).localeCompare(String(a.time)));
+    const q=(document.getElementById('billSearch')?.value||'').trim().toLowerCase();
+    const filtered=bills.filter(x=>[x.counterparty,x.product,x.remark,x.category].join(' ').toLowerCase().includes(q));
+    const count=document.getElementById('billCount');if(count)count.textContent='本机已保存 '+bills.length+' 笔 · 当前显示 '+filtered.length+' 笔';
+    list.innerHTML=filtered.slice(0,150).map(x=>{
+      const id=encodeURIComponent(x.id),isLinked=!!x.refundForId||(x.direction==='支出'&&refundLinkedAmount(x.id)>0),st=x.direction==='支出'?offsetState(x):null;
+      return '<button type="button" onclick="openBillDetail(\''+id+'\')" class="'+(isLinked?'offset-linked-row':'')+'" style="width:100%;text-align:left;background:'+(isLinked?'#fffafa':'white')+';border:'+(isLinked?'1.5px solid #d93025':'0')+';border-bottom:'+(isLinked?'1.5px solid #d93025':'1px solid var(--line)')+';padding:12px 10px;display:flex;align-items:center;gap:10px;margin-bottom:5px;border-radius:'+(isLinked?'10px':'0')+'"><span class="icon">'+(x.direction==='收入'?'💰':x.direction==='支出'?'🧾':'↔️')+'</span><span class="txmain" style="min-width:0"><b style="'+(isLinked?'color:#c62828':'')+'">'+escapeHtml(String(x.counterparty||x.product||'未填写交易对象'))+'</b><small>'+escapeHtml(String(x.time||''))+' · '+escapeHtml(String(x.category||'未分类'))+(isLinked?' · 冲销已关联':'')+(st&&st.used>0?' · 实际支出 '+fmt(st.net):'')+'</small></span><span style="text-align:right;white-space:nowrap"><b class="money '+(x.direction==='收入'?'income':'')+'" style="'+(isLinked?'color:#c62828':'')+'">'+(x.direction==='支出'?'-':x.direction==='收入'?'+':'')+fmt(x.amount)+'</b><small style="display:block;color:var(--muted);margin-top:4px">查看详情 ›</small></span></button>';
+    }).join('')||(bills.length?'<div class="empty">没有符合搜索条件的账单。</div>':'<div class="empty">尚未导入真实账单。请前往「我的」导入微信账单。</div>');
+  };
+
+  // 分类汇总仍保留原始分类和笔数，但支出金额显示冲销后的实际净额。
+  window.renderCategorySummary=function(){
+    loadCategoryConfig();refreshCategoryNameEditors();
+    const bills=getSavedBills(),pending=bills.filter(x=>!x.category||x.category==='未分类').length;
+    const set=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v;};
+    set('catTotal',bills.length);set('catDone',bills.length-pending);set('catPending',pending);
+    const build=(cats,dir,includePending=false)=>{
+      const rows=cats.map(c=>{const a=bills.filter(x=>x.direction===dir&&x.category===c);return {c,n:a.length,sum:a.reduce((sum,x)=>sum+(dir==='支出'?expenseNetAmount(x):Number(x.amount||0)),0)};}).filter(x=>x.n);
+      if(includePending){const a=bills.filter(x=>x.direction===dir&&(!x.category||x.category==='未分类'));if(a.length)rows.push({c:'未分类',n:a.length,sum:a.reduce((sum,x)=>sum+(dir==='支出'?expenseNetAmount(x):Number(x.amount||0)),0)});}
+      rows.sort((a,b)=>b.sum-a.sum);
+      return rows.length?rows.map(x=>'<button onclick="showCategoryDetails(&quot;'+encodeURIComponent(x.c)+'&quot;,&quot;'+dir+'&quot;)" style="width:100%;border:0;background:white;text-align:left;padding:11px 0;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;font-size:13px"><span>'+escapeHtml(x.c)+'（'+x.n+'笔） · 查看明细 ›</span><b>'+fmt(x.sum)+'</b></button>').join(''):'<p class="muted">暂无账单</p>';
+    };
+    const e=document.getElementById('expenseCategorySummary'),i=document.getElementById('incomeCategorySummary');
+    if(e)e.innerHTML=build(EXPENSE_CATEGORIES,'支出',true);if(i)i.innerHTML=build(INCOME_CATEGORIES,'收入',false);
+  };
+
+  // 分类明细保留原账单金额，关联记录红框标识，并额外展示净支出。
+  window.showCategoryDetails=function(encodedCategory,direction){
+    const category=decodeURIComponent(encodedCategory),pending=category==='未分类';
+    const rows=getSavedBills().filter(x=>x.direction===direction&&(pending?(!x.category||x.category==='未分类'):x.category===category)).sort((a,b)=>String(b.time).localeCompare(String(a.time)));
+    const box=document.getElementById('categoryDetails');if(!box)return;
+    box.innerHTML='<b>'+escapeHtml(category)+' · '+rows.length+'笔</b>'+rows.map(x=>{
+      const linked=!!x.refundForId||(direction==='支出'&&refundLinkedAmount(x.id)>0),st=direction==='支出'?offsetState(x):null;
+      return '<button type="button" data-category-bill-id="'+encodeURIComponent(x.id)+'" class="'+(linked?'offset-linked-row':'')+'" style="width:100%;text-align:left;background:'+(linked?'#fffafa':'white')+';border:'+(linked?'1.5px solid #d93025':'0')+';border-bottom:'+(linked?'1.5px solid #d93025':'1px solid var(--line)')+';padding:10px;margin:5px 0;border-radius:'+(linked?'10px':'0')+'"><b style="'+(linked?'color:#c62828':'')+'">'+escapeHtml(String(x.counterparty||x.product||'未填写交易对象'))+'</b><small style="display:block;color:var(--muted);margin-top:4px">'+escapeHtml(String(x.time||''))+' · '+escapeHtml(String(x.product||''))+'</small><span class="money" style="'+(linked?'color:#c62828':'')+'">'+(direction==='支出'?'-':'+')+fmt(x.amount)+'</span>'+(st&&st.used>0?'<small style="display:block;color:#c62828;margin-top:4px">已冲销 '+fmt(st.used)+' · 实际支出 '+fmt(st.net)+'（'+st.status+'）</small>':linked?'<small style="display:block;color:#c62828">已建立冲销关联</small>':'')+'</button>';
+    }).join('')||'<p class="muted">该分类下暂无账单。</p>';
+  };
+
+  // 分析页分类支出合计采用净额；仍保留关联账单分类行，金额可为0。
+  const baseRenderAnalysis=window.renderAnalysis;
+  if(typeof baseRenderAnalysis==='function'){
+    window.renderAnalysis=function(){
+      baseRenderAnalysis();
+      const all=getSavedBills();
+      const year=document.getElementById('biYear')?.value||'',month=document.getElementById('biMonth')?.value||'',dir=document.getElementById('biDirection')?.value||'',cat=document.getElementById('biCategory')?.value||'',min=document.getElementById('biMin')?.value||'',max=document.getElementById('biMax')?.value||'',kw=(document.getElementById('biKeyword')?.value||'').trim().toLowerCase();
+      const data=all.filter(x=>{const d=dateParts(x.time),txt=[x.counterparty,x.product,x.remark].join(' ').toLowerCase();return (!year||(d&&d.year===year))&&(!month||(d&&d.month===month))&&(!dir||x.direction===dir)&&(!cat||x.category===cat)&&(min===''||Number(x.amount)>=Number(min))&&(max===''||Number(x.amount)<=Number(max))&&(!kw||txt.includes(kw));});
+      const sums={};data.filter(x=>x.direction==='支出').forEach(x=>{const c=x.category||'未分类';sums[c]??={amount:0,count:0};sums[c].amount+=expenseNetAmount(x);sums[c].count++;});
+      const total=Object.values(sums).reduce((a,b)=>a+b.amount,0),el=document.getElementById('biCategories'),sorted=Object.entries(sums).sort((a,b)=>b[1].amount-a[1].amount);
+      if(el)el.innerHTML=sorted.length?sorted.map(([c,v])=>'<button type="button" data-bi-category="'+encodeURIComponent(c)+'" style="display:block;width:100%;text-align:left;border:0;background:white;padding:11px 0;border-bottom:1px solid var(--line)"><div class="catrow"><span>'+escapeHtml(c)+'（'+v.count+'笔）</span><b>'+fmt(v.amount)+' · '+(total?v.amount/total*100:0).toFixed(1)+'%</b></div><div class="track"><div class="fill" style="width:'+(total?v.amount/total*100:0)+'%"></div></div><small style="display:block;color:#3978f6;margin-top:6px">点击查看明细并修改分类 ›</small></button>').join(''):'<p class="muted">当前筛选条件下没有支出数据</p>';
+    };
+  }
+})();
+</script>
+
 </body></html>
