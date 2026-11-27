@@ -290,8 +290,8 @@ async function readBillFile(){
     try{text=new TextDecoder('utf-8',{fatal:true}).decode(u8);}
     catch(e){try{text=new TextDecoder('gb18030').decode(u8);}catch(e2){text=new TextDecoder('gbk').decode(u8);}}
    }
-   text=text.replace(/^\\uFEFF/,'');
-   const parseCsv=source=>{const out=[],row=[];let value='',quoted=false;for(let i=0;i<source.length;i++){const c=source[i];if(c==='"'&&quoted&&source[i+1]==='"'){value+='"';i++;}else if(c==='"'){quoted=!quoted;}else if(c===','&&!quoted){row.push(value);value='';}else if((c==='\\n'||c==='\\r')&&!quoted){if(c==='\\r'&&source[i+1]==='\\n')i++;row.push(value);if(row.some(x=>String(x).trim()!==''))out.push(row.slice());row.length=0;value='';}else value+=c;}row.push(value);if(row.some(x=>String(x).trim()!==''))out.push(row);return out;};
+   text=text.replace(/^\uFEFF/,'');
+   const parseCsv=source=>{const out=[],row=[];let value='',quoted=false;for(let i=0;i<source.length;i++){const c=source[i];if(c==='"'&&quoted&&source[i+1]==='"'){value+='"';i++;}else if(c==='"'){quoted=!quoted;}else if(c===','&&!quoted){row.push(value);value='';}else if((c==='\n'||c==='\r')&&!quoted){if(c==='\r'&&source[i+1]==='\n')i++;row.push(value);if(row.some(x=>String(x).trim()!==''))out.push(row.slice());row.length=0;value='';}else value+=c;}row.push(value);if(row.some(x=>String(x).trim()!==''))out.push(row);return out;};
    rows=parseCsv(text);
   }else{
    if(!window.XLSX)throw new Error('Excel 解析组件加载失败，请检查网络后刷新网页重试。');
