@@ -1364,13 +1364,13 @@ function testRecognitionRules(){const text=String(document.getElementById('recog
  window.getGlobalSubcategories=function(){return OWNER_V2.slice();};
  getGlobalSubcategories=function(){return OWNER_V2.slice();};
  window.categorySettingsDataV3=function(){
-  setExpenseCategories();
-  return {expense:EXPENSE_V2.slice(),income:[...INCOME_V2,'冲销抵账'],subcategories:OWNER_V2.slice()};
+  return {expense:EXPENSE_CATEGORIES.slice(),income:INCOME_CATEGORIES.slice(),subcategories:OWNER_V2.slice()};
  };
  categorySettingsDataV3=window.categorySettingsDataV3;
  window.saveCategorySettingsV3=function(d){
-  const exp=[...new Set((d.expense||EXPENSE_V2).filter(x=>EXPENSE_V2.includes(x)))];
-  const inc=[...new Set((d.income||INCOME_V2).filter(x=>INCOME_V2.includes(x)))];
+  const cleanNames=arr=>[...new Set((arr||[]).map(x=>String(x||'').trim()).filter(Boolean))];
+  const exp=cleanNames(d.expense||EXPENSE_V2);
+  const inc=cleanNames(d.income||INCOME_V2).filter(x=>x!=='冲销抵账');
   EXPENSE_CATEGORIES.splice(0,EXPENSE_CATEGORIES.length,...exp);
   INCOME_CATEGORIES.splice(0,INCOME_CATEGORIES.length,...inc,'冲销抵账');
   localStorage.setItem('expense_assistant_category_config_v1',JSON.stringify({expense:exp,income:INCOME_CATEGORIES,subcategories:{}}));
@@ -1379,7 +1379,11 @@ function testRecognitionRules(){const text=String(document.getElementById('recog
  };
  saveCategorySettingsV3=window.saveCategorySettingsV3;
  const already=localStorage.getItem(V2_KEY);
- setExpenseCategories();
+ if(!already){setExpenseCategories();}
+ else{
+  try{const cfg=JSON.parse(localStorage.getItem('expense_assistant_category_config_v1')||'{}');if(Array.isArray(cfg.expense))EXPENSE_CATEGORIES.splice(0,EXPENSE_CATEGORIES.length,...cfg.expense);if(Array.isArray(cfg.income))INCOME_CATEGORIES.splice(0,INCOME_CATEGORIES.length,...cfg.income.filter(x=>x!=='冲销抵账'));}catch(e){}
+  if(!INCOME_CATEGORIES.includes('冲销抵账'))INCOME_CATEGORIES.push('冲销抵账');
+ }
  normalizeMerchantRules();
  updateRecognitionRules();
  if(!already){
