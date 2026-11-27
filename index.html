@@ -530,13 +530,17 @@ loadCategoryConfig();if(!INCOME_CATEGORIES.includes('冲销抵账'))INCOME_CATEG
 const OWNER_OPTIONS_V2=['本人','老婆','小孩','家庭共用','未指定'];
 const ownerOfV2=x=>String(x&&x.owner||'未指定');
 const categoryOfV2=x=>String(x&&x.category||'未分类');
+const RECENT_CATEGORY_ORDER_KEY='expense_assistant_recent_category_order_v1';
+function getRecentCategoryOrder(direction){let data={};try{data=JSON.parse(localStorage.getItem(RECENT_CATEGORY_ORDER_KEY)||'{}')||{};}catch(e){}return Array.isArray(data[direction])?data[direction]:[];}
+function rememberRecentCategoryUse(direction,category){if(!direction||!category||category==='未分类')return;let data={};try{data=JSON.parse(localStorage.getItem(RECENT_CATEGORY_ORDER_KEY)||'{}')||{};}catch(e){}const list=Array.isArray(data[direction])?data[direction]:[];data[direction]=[category,...list.filter(x=>x!==category)];try{localStorage.setItem(RECENT_CATEGORY_ORDER_KEY,JSON.stringify(data));}catch(e){}}
+function sortCategoriesByRecentUse(categories,direction){const recent=getRecentCategoryOrder(direction),rank=new Map(recent.map((name,index)=>[name,index]));return categories.slice().sort((a,b)=>(rank.has(a)?rank.get(a):Number.MAX_SAFE_INTEGER)-(rank.has(b)?rank.get(b):Number.MAX_SAFE_INTEGER));}
 (()=>{const st=document.createElement('style');st.textContent='.pending-category{color:#c62828!important;background:#fff0f0!important;border:1px solid #ffd1d1!important;border-radius:9px!important}.pending-badge{display:inline-block;background:#ffe5e5;color:#c62828;border-radius:20px;padding:3px 8px;font-size:11px;font-weight:700}.owner-pending{color:#b45309!important;background:#fff6e5!important;border-radius:20px;padding:3px 8px;font-size:11px}.pending-stat{border:1px solid #ffd1d1;background:#fff6f6}.owner-stat{border:1px solid #ffe3b3;background:#fffaf0}';document.head.appendChild(st)})();
 window.applyMerchantRule=function(counterparty,category,owner){const name=String(counterparty||'').trim();if(!name)return 0;const rules=getMerchantRules().filter(r=>r.counterparty!==name);rules.push({counterparty:name,category,owner:owner||'未指定'});saveMerchantRules(rules);const bills=getSavedBills();let count=0;bills.forEach(x=>{if(String(x.counterparty||'').trim()===name){x.category=category;x.owner=owner||'未指定';count++}});localStorage.setItem(WECHAT_STORE_KEY,JSON.stringify(bills));return count};
 window.applySavedMerchantRulesToBill=function(bill){const name=String(bill.counterparty||'').trim();if(!name)return false;const rule=getMerchantRules().find(r=>r.counterparty===name);if(!rule)return false;bill.category=rule.category;bill.owner=rule.owner||'未指定';return true};
 window.openBillDetail=function(encodedId){
  const id=decodeURIComponent(encodedId),x=getSavedBills().find(v=>v.id===id);if(!x)return;activeBillId=id;
  const isIncome=x.direction==='收入',special='冲销抵账';
- const cats=[...(isIncome?INCOME_CATEGORIES:EXPENSE_CATEGORIES),'未分类'];
+ const cats=sortCategoriesByRecentUse([...(isIncome?INCOME_CATEGORIES:EXPENSE_CATEGORIES),'未分类'],x.direction);
  if(isIncome&&!cats.includes(special))cats.push(special);
  const currentCategory=categoryOfV2(x),currentOwner=ownerOfV2(x);
  const categoryTags=cats.map(c=>{const red=isIncome&&c===special;return '<button type="button" data-category-tag="'+escapeHtml(c)+'" aria-pressed="'+(currentCategory===c?'true':'false')+'" onclick="selectCategoryTagV2(this)" style="border:1px solid '+(currentCategory===c?(red?'#dc2626':'#3978f6'):(red?'#fecaca':'#e2e7ef'))+';background:'+(currentCategory===c?(red?'#fef2f2':'#edf4ff'):(red?'#fff7f7':'#fff'))+';color:'+(red?'#dc2626':currentCategory===c?'#245fc7':'#536078')+';border-radius:22px;padding:9px 15px;font-size:14px;font-weight:'+(currentCategory===c?'700':'500')+';cursor:pointer">'+(red?'🔴 ':'')+escapeHtml(c)+'</button>'}).join('');
@@ -583,7 +587,7 @@ window.selectCategoryTagV2=function(button){
  // 普通分类选择后立即保存并关闭详情，不再要求点击“保存分类”。
  const currentBill=latest.find(x=>x.id===id);
  if(currentBill&&currentBill.refundForId){delete currentBill.refundForId;delete currentBill.refundLinkStatus;}
- localStorage.setItem(WECHAT_STORE_KEY,JSON.stringify(latest));rememberCategoryUsage(latest);
+ localStorage.setItem(WECHAT_STORE_KEY,JSON.stringify(latest));rememberCategoryUsage(latest);rememberRecentCategoryUse(bill.direction,value);
  renderBills();renderCategorySummary();renderHome();renderAnalysis();
  const modal=document.getElementById('billDetailModal');if(modal)modal.style.display='none';activeBillId=null;
  if(applyAll)alert('已将「'+merchant+'」的 '+(matches.length+1)+' 笔历史账单统一归类为「'+value+'」。');
@@ -606,7 +610,7 @@ window.saveDetailClassificationV2=function(){
  }else if(bill.refundForId){if(!confirm('当前账单已关联原始支出。改为其他分类后，将同时撤销退款关联。是否继续？'))return;delete bill.refundForId;delete bill.refundLinkStatus;}
  bill.category=category;
  if(isOffset){bill.refundForId=targetId;bill.refundLinkStatus='confirmed';}
- localStorage.setItem(WECHAT_STORE_KEY,JSON.stringify(bills));rememberCategoryUsage(bills);
+ localStorage.setItem(WECHAT_STORE_KEY,JSON.stringify(bills));rememberCategoryUsage(bills);rememberRecentCategoryUse(bill.direction,category);
  renderBills();renderCategorySummary();renderHome();renderAnalysis();openBillDetail(activeBillId);
 };
 window.addCategoryFromDetailV2=function(){const name=prompt('请输入新的一级分类名称：');if(name===null)return;const n=name.trim();if(!n)return alert('分类名称不能为空。');if(categoryNames().includes(n))return alert('该一级分类已存在。');const x=getSavedBills().find(v=>v.id===activeBillId);if(x&&x.direction==='收入')INCOME_CATEGORIES.push(n);else EXPENSE_CATEGORIES.push(n);saveCategoryConfig();refreshAfterCategoryChange();openBillDetail(activeBillId);document.getElementById('detailCategorySelect').value=n};
