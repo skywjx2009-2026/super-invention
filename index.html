@@ -2757,7 +2757,7 @@ body[data-theme="dark"] [id$="Modal"]>section:first-child>div:first-child{backgr
     var month=document.getElementById('billMonth')?.value||'';
     var keyword=(document.getElementById('billSearch')?.value||'').trim().toLowerCase();
     var rows=getSavedBills().filter(function(x){
-      return x.direction===direction&&(category==='未分类'?(!x.category||x.category==='未分类'):category==='冲销抵账'?isOffsetIncome(x):(x.category||'未分类')===category);
+      return x.direction===direction&&!(direction==='收入'&&isOffsetIncome(x))&&(category==='未分类'?(!x.category||x.category==='未分类'):category==='冲销抵账'?isOffsetIncome(x):(x.category||'未分类')===category);
     });
     rows=rows.filter(function(x){
       var d=dateParts(x.time);
@@ -2768,8 +2768,7 @@ body[data-theme="dark"] [id$="Modal"]>section:first-child>div:first-child{backgr
     }).sort(function(a,b){return String(b.time||'').localeCompare(String(a.time||''));});
     var panel=document.createElement('div');
     panel.className='microledger-category-detail-panel';
-    panel.style.cssText='margin:4px 0 12px;padding:8px 12px;background:var(--bg);border:1px solid var(--line);border-radius:10px';
-    panel.innerHTML='<div style="font-weight:700;font-size:13px;padding:5px 0 9px">'+escapeHtml(category)+'明细 · '+rows.length+'笔</div>'+
+    panel.style.cssText='margin:4px 0 12px;padding:8px 12px;background:var(--bg);border:1px solpanel.innerHTML='<div style="font-weight:700;font-size:13px;padding:5px 0 9px">明细 · '+rows.length+'笔</div>'+category)+'明细 · '+rows.length+'笔</div>'+
       (rows.length?rows.map(function(x){
         var linked=!!x.refundForId||(direction==='支出'&&refundLinkedAmount(x.id)>0);
         var amount=direction==='支出'?expenseNetAmount(x):Number(x.amount||0);
