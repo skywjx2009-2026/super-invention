@@ -1608,7 +1608,7 @@ function testRecognitionRules(){const text=String(document.getElementById('recog
  row.type='button';row.id='aboutWeChatBookEntry';row.className='tx';
  row.style.cssText='width:100%;border:0;border-top:1px solid var(--line);background:white;text-align:left;padding:12px 0;cursor:pointer';
  row.innerHTML='<div class="icon">ℹ️</div><div class="txmain"><b>关于微账本</b><small>了解产品定位、开发初衷与数据使用方式</small></div><span>›</span>';
- row.addEventListener('click',window.openAboutWeChatBook);
+ row.addEventListener('click',()=>{if(typeof window.openAboutWeChatBook==='function')window.openAboutWeChatBook();});
  const systemBtn=card.querySelector('button[onclick="openSystemSettings()"]');
  if(systemBtn)systemBtn.insertAdjacentElement('beforebegin',row);else card.appendChild(row);
  const modal=document.createElement('div');
@@ -2053,4 +2053,57 @@ body[data-theme="dark"] [id$="Modal"]>section:first-child>div:first-child{backgr
  const target=$('biIncome')?.parentElement?.parentElement;
  if(target)new MutationObserver(()=>{paintAnalysis();updateExpenseCount();}).observe(target,{childList:true,subtree:true,characterData:true});
 })();
-</script></body></html>
+</script>
+<script id="microledger-four-issue-fixes-v1">
+(function(){
+  // 1. 金额前带人民币符号时，优先按符号后的完整数字识别，避免误取日期中的月份。
+  const oldParse=window.parseManualDescription;
+  function currencyAmount(text){
+    const re=/[¥￥]\\s*([0-9][0-9,]*(?:\\.\\d+)?)/g;
+    let m,last=null;
+    while((m=re.exec(String(text||'')))!==null){
+      const value=Number(m[1].replace(/,/g,''));
+      if(Number.isFinite(value)&&value>0)last=value;
+    }
+    return last;
+  }
+  if(typeof oldParse==='function')window.parseManualDescription=function(){
+    const text=document.getElementById('manualVoiceText')?.value||'';
+    oldParse();
+    const value=currencyAmount(text);
+    const amount=document.getElementById('manualAmount');
+    if(value!==null&&amount){
+      amount.value=String(value);
+      const hint=document.getElementById('manualParseHint');
+      if(hint)hint.textContent=hint.textContent.replace(/金额：[^；。]+/,'金额：'+value+'元')+'（已识别人民币符号金额，请核对）';
+    }
+  };
+
+  // 2. 用途标签容器实际位于 .manual-select-wrap 内，原修正选择器未命中该结构。
+  const style=document.createElement('style');
+  style.id='microledger-four-issue-layout';
+  style.textContent=[
+    '#manualPurposeMulti{display:block!important;width:100%!important;min-width:0!important;box-sizing:border-box!important;}',
+    '.manual-select-wrap:has(#manualPurposeMulti){display:block!important;width:100%!important;min-width:0!important;}',
+    'label:has(#manualPurposeMulti){grid-column:1/-1!important;width:100%!important;min-width:0!important;}',
+    '#manualPurposeMulti>div{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:9px!important;width:100%!important;}',
+    '#manualPurposeMulti>div>label{display:flex!important;align-items:center!important;justify-content:flex-start!important;gap:8px!important;width:100%!important;min-width:0!important;min-height:44px!important;box-sizing:border-box!important;padding:9px 11px!important;margin:0!important;border:1px solid var(--line)!important;border-radius:10px!important;background:var(--card)!important;}',
+    '#manualPurposeMulti>div>label>input{flex:0 0 17px!important;width:17px!important;height:17px!important;margin:0!important;}',
+    '#manualPurposeMulti>div>label>span{display:block!important;min-width:0!important;line-height:1.35!important;overflow-wrap:anywhere!important;}',
+    '#billDetailModal{z-index:1600!important;}',
+    '#billDetailModal>div:first-child{position:relative!important;z-index:1601!important;max-height:calc(100dvh - 28px)!important;overflow-y:auto!important;overscroll-behavior:contain!important;}',
+    '#billDetailModal>div:first-child>div:first-child{position:sticky!important;top:-1px!important;z-index:5!important;}',
+    '.v22group-active{z-index:2!important;}'
+  ].join('');
+  document.head.appendChild(style);
+
+  // 3. 打开账单详情时提高整个详情弹窗层级，确保盖住分类页的 sticky 标题。
+  const open=window.openBillDetail;
+  if(typeof open==='function')window.openBillDetail=function(id){
+    open(id);
+    const modal=document.getElementById('billDetailModal');
+    if(modal){modal.style.zIndex='1600';modal.style.position='fixed';}
+  };
+})();
+</script>
+</body></html>
