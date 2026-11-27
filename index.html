@@ -2283,4 +2283,73 @@ body[data-theme="dark"] [id$="Modal"]>section:first-child>div:first-child{backgr
 })();
 </script>
 
+
+<script>
+/* MICROLEDGER_OFFSET_INCOME_VISIBILITY_V1: 冲销收入保留在收入分析结构中，但不计入正常收入 */
+(function(){
+  const baseRender=window.renderAnalysis;
+  if(typeof baseRender==='function'){
+    window.renderAnalysis=function(){
+      baseRender();
+      const rows=(window.analysisFilteredBills||[]).filter(x=>x.direction==='收入');
+      const groups={};
+      rows.forEach(x=>{
+        const c=x.category||'未分类';
+        groups[c]??={normal:0,offset:0,normalCount:0,offsetCount:0};
+        if(isOffsetIncome(x)){groups[c].offset+=Number(x.amount||0);groups[c].offsetCount++;}
+        else{groups[c].normal+=effectiveIncomeAmount(x);groups[c].normalCount++;}
+      });
+      const total=Object.values(groups).reduce((a,v)=>a+v.normal,0);
+      const el=document.getElementById('biIncomeCategories');
+      const entries=Object.entries(groups).sort((a,b)=>(b[1].normal+b[1].offset)-(a[1].normal+a[1].offset));
+      if(el)el.innerHTML=entries.length?entries.map(([c,v])=>{
+        const count=v.normalCount+v.offsetCount;
+        const share=total?v.normal/total*100:0;
+        return '<button type="button" data-bi-income-category="'+encodeURIComponent(c)+'" style="display:block;width:100%;text-align:left;border:0;background:white;padding:11px 0;border-bottom:1px solid var(--line)">'+
+          '<div class="catrow"><span>'+escapeHtml(c)+'（'+count+'笔）</span><b>'+money(v.normal+v.offset)+' · 分类记录总额</b></div>'+
+          (v.normalCount?'<small style="display:block;color:var(--text);margin-top:5px">正常收入：'+money(v.normal)+'（'+share.toFixed(1)+'%）</small>':'')+
+          (v.offsetCount?'<small style="display:block;color:#c62828;margin-top:5px">冲销抵账：'+money(v.offset)+'（'+v.offsetCount+'笔，不计入正常收入）</small>':'')+
+          '<div class="track"><div class="fill" style="width:'+share+'%"></div></div>'+
+          '<small style="display:block;color:#3978f6;margin-top:6px">点击查看全部收入明细（含冲销记录）›</small></button>';
+      }).join(''):'<p class="muted">当前筛选条件下没有收入数据</p>';
+      const top=rows.slice().sort((a,b)=>Number(b.amount||0)-Number(a.amount||0)).slice(0,10);
+      const topEl=document.getElementById('biIncomeTop');
+      if(topEl)topEl.innerHTML=top.length?top.map((x,i)=>{
+        const offset=isOffsetIncome(x);
+        return '<button type="button" data-bi-income-bill-id="'+encodeURIComponent(x.id)+'" style="width:100%;text-align:left;background:white;border:0;border-bottom:1px solid var(--line);padding:12px 0;display:flex;align-items:center;gap:10px">'+
+          '<span class="icon">'+(i+1)+'</span><span class="txmain" style="min-width:0"><b style="'+(offset?'color:#c62828':'')+'">'+escapeHtml(x.counterparty||x.product||'未填写交易对象')+'</b><small>'+escapeHtml(x.time||'')+' · '+escapeHtml(x.category||'未分类')+(offset?' · 冲销收入（不计入正常收入）':'')+'</small></span>'+
+          '<b class="money income" style="'+(offset?'color:#c62828':'')+'">'+money(x.amount)+'</b></button>';
+      }).join(''):'<p class="muted">暂无收入记录</p>';
+    };
+  }
+  document.addEventListener('click',function(e){
+    const target=e.target.closest('[data-bi-income-category]');
+    if(!target)return;
+    e.preventDefault();e.stopImmediatePropagation();
+    const name=decodeURIComponent(target.dataset.biIncomeCategory);
+    const rows=(window.analysisFilteredBills||[]).filter(x=>x.direction==='收入'&&(name==='未分类'?(!x.category||x.category==='未分类'):(x.category||'未分类')===name));
+    showAnalysisDrilldown(name+' 收入明细（含冲销记录）',rows);
+  },true);
+  const baseCategoryDetails=window.showCategoryDetails;
+  if(typeof baseCategoryDetails==='function'){
+    window.showCategoryDetails=function(encodedCategory,direction){
+      baseCategoryDetails(encodedCategory,direction);
+      if(direction!=='收入')return;
+      const category=decodeURIComponent(encodedCategory),pending=category==='未分类';
+      const rows=getSavedBills().filter(x=>x.direction==='收入'&&(pending?(!x.category||x.category==='未分类'):x.category===category));
+      const box=document.getElementById('categoryDetails');
+      if(!box)return;
+      box.innerHTML='<b>'+escapeHtml(category)+' · '+rows.length+'笔</b>'+rows.map(x=>{
+        const offset=isOffsetIncome(x);
+        return '<button type="button" data-category-bill-id="'+encodeURIComponent(x.id)+'" class="'+(offset?'offset-linked-row':'')+'" style="width:100%;text-align:left;background:'+(offset?'#fffafa':'white')+';border:'+(offset?'1.5px solid #d93025':'0')+';border-bottom:'+(offset?'1.5px solid #d93025':'1px solid var(--line)')+';padding:10px;margin:5px 0;border-radius:'+(offset?'10px':'0')+'">'+
+          '<b style="'+(offset?'color:#c62828':'')+'">'+escapeHtml(String(x.counterparty||x.product||'未填写交易对象'))+'</b>'+
+          '<small style="display:block;color:var(--muted);margin-top:4px">'+escapeHtml(String(x.time||''))+' · '+escapeHtml(String(x.product||''))+'</small>'+
+          '<span class="money" style="'+(offset?'color:#c62828':'')+'">+'+fmt(x.amount)+'</span>'+
+          (offset?'<small style="display:block;color:#c62828;margin-top:4px">已冲销 '+fmt(x.amount)+' · 计入正常收入 0.00（原始收入记录保留）</small>':'')+'</button>';
+      }).join('')||'<p class="muted">该分类下暂无账单。</p>';
+    };
+  }
+})();
+</script>
+
 </body></html>
