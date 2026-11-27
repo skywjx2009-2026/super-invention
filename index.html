@@ -1620,4 +1620,62 @@ function testRecognitionRules(){const text=String(document.getElementById('recog
 })();
 </script>
 
+<script>
+(function(){
+const $=id=>document.getElementById(id),E=v=>escapeHtml(String(v==null?'':v));
+const dims=[
+{key:'direction',name:'收支类型',ok:x=>['收入','支出'].includes(x.direction),get:x=>x.direction},
+{key:'category',name:'一级分类',ok:x=>!!x.category&&x.category!=='未分类',get:x=>x.category},
+{key:'payment',name:'支付方式',ok:x=>!!String(x.payment||'').trim(),get:x=>x.payment},
+{key:'transactionNature',name:'交易性质',ok:x=>['日常收支','储蓄投资'].includes(x.transactionNature),get:x=>x.transactionNature},
+{key:'owner',name:'消费归属',ok:x=>['本人','老婆','小孩','家庭共用','未指定'].includes(x.owner),get:x=>x.owner},
+{key:'purposeTag',name:'用途标签',ok:x=>!!String(x.purposeTag||'').trim(),get:x=>x.purposeTag}
+];
+function complete(){
+ const bills=getSavedBills();let box=$('v22Completeness');
+ if(!box){box=document.createElement('div');box.id='v22Completeness';box.className='card';const a=$('catTotal')&&$('catTotal').closest('.card');if(a)a.insertAdjacentElement('afterend',box);}
+ if(!box)return;
+ const missing=bills.filter(x=>dims.some(d=>!d.ok(x))),done=bills.length-missing.length;
+ box.innerHTML='<b>六维分类完整度</b><div style="height:8px;background:#edf0f5;border-radius:9px;margin:10px 0"><i style="display:block;height:8px;background:#16a36a;border-radius:9px;width:'+(bills.length?done/bills.length*100:0)+'%"></i></div><div style="font-size:12px;color:#657084;margin-bottom:10px">总账单 '+bills.length+' 笔 · 已完善 '+done+' 笔 · 待完善 '+missing.length+' 笔 · 完整率 '+(bills.length?(done/bills.length*100).toFixed(1):'0.0')+'%</div><div class="v22dim">'+dims.map(d=>'<button type="button" data-v22-dim="'+d.key+'">'+d.name+' <b>'+(bills.filter(x=>!d.ok(x)).length?bills.filter(x=>!d.ok(x)).length+'笔待完善':'已完成')+'</b></button>').join('')+'</div><div id="v22Missing" style="display:none"></div>';
+ box.querySelectorAll('[data-v22-dim]').forEach(btn=>btn.onclick=()=>{const d=dims.find(x=>x.key===btn.dataset.v22Dim),rows=bills.filter(x=>!d.ok(x)),out=$('v22Missing');out.style.display='block';out.innerHTML='<b>'+d.name+'待完善（'+rows.length+'笔）</b>'+rows.slice(0,100).map(x=>'<button type="button" data-v22-open="'+encodeURIComponent(x.id)+'" class="v22row"><span>'+E(x.counterparty||x.product||'未填写交易对象')+'<small>'+E(x.time||'')+'</small></span><b>去完善 ›</b></button>').join('');out.querySelectorAll('[data-v22-open]').forEach(b=>b.onclick=()=>openBillDetail(b.dataset.v22Open));});
+}
+const oldSummary=window.renderCategorySummary;
+window.renderCategorySummary=function(){if(oldSummary)oldSummary();complete();};
+window.showCategoryDetails=function(encoded,direction){
+ const cat=decodeURIComponent(encoded),rows=getSavedBills().filter(x=>x.direction===direction&&(cat==='未分类'?(!x.category||x.category==='未分类'):x.category===cat)).sort((a,b)=>String(b.time).localeCompare(String(a.time)));
+ const parent=$(direction==='收入'?'incomeCategorySummary':'expenseCategorySummary');if(!parent)return;
+ const trigger=[...parent.querySelectorAll('button')].find(b=>b.textContent.includes(cat+'（'));if(!trigger)return;
+ if(trigger.nextElementSibling&&trigger.nextElementSibling.classList.contains('v22expand')){trigger.nextElementSibling.remove();return;}
+ parent.querySelectorAll('.v22expand').forEach(x=>x.remove());
+ const panel=document.createElement('div');panel.className='v22expand';
+ panel.innerHTML='<b>'+E(cat)+' · '+rows.length+'笔</b>'+rows.map(x=>'<button type="button" class="v22row" data-v22-open="'+encodeURIComponent(x.id)+'"><span><b>'+E(x.counterparty||x.product||'未填写交易对象')+'</b><small>'+E(x.time||'')+' · '+dims.map(d=>d.name+'：'+(d.ok(x)?E(d.get(x)):'未分类')).join(' | ')+'</small></span><b>查看并修改 ›</b></button>').join('');
+ trigger.insertAdjacentElement('afterend',panel);panel.querySelectorAll('[data-v22-open]').forEach(b=>b.onclick=()=>openBillDetail(b.dataset.v22Open));
+};
+function extraBI(){
+ const data=window.analysisFilteredBills||getSavedBills();let host=$('v22BI');
+ if(!host){host=document.createElement('div');host.id='v22BI';const a=$('biIncomeCategories')?.parentElement;if(a)a.insertAdjacentElement('afterend',host);}
+ if(!host)return;
+ const specs=[['交易性质',x=>x.transactionNature],['用途标签',x=>x.purposeTag],['消费归属',x=>x.owner],['支付方式',x=>x.payment],['收入分类',x=>x.direction==='收入'?x.category:null]];
+ host.innerHTML='<div class="section"><h2>多维度分析</h2><span>随当前筛选条件联动</span></div>'+specs.map(([title,key])=>{
+  const m=new Map();data.forEach(x=>{if(title!=='收入分类'&&x.direction!=='支出')return;if(title==='收入分类'&&(x.direction!=='收入'||isOffsetIncome(x)))return;const n=String(key(x)||'未分类');if(!m.has(n))m.set(n,{n,a:0,c:0});const v=m.get(n);v.a+=title==='收入分类'?effectiveIncomeAmount(x):expenseNetAmount(x);v.c++;});
+  const a=[...m.values()].sort((x,y)=>y.a-x.a),total=a.reduce((z,x)=>z+x.a,0);
+  return '<div class="card" style="margin-bottom:10px"><b>'+title+'</b>'+a.map(x=>'<div class="catrow" style="padding:8px 0;border-bottom:1px solid var(--line)"><span>'+E(x.n)+'<small style="display:block;color:#8993a4">'+x.c+'笔 · '+(total?x.a/total*100:0).toFixed(1)+'%</small></span><b>'+money(x.a)+'</b></div>').join('')+'</div>';
+ }).join('')+'<div class="section"><h2>近12个月趋势</h2><span>日常支出 / 收入 / 储蓄投资</span></div><div class="card" id="v22MonthTrend"></div><div class="section"><h2>按日对比</h2><span>选择两个自然月比较每日支出</span></div><div class="card"><div class="v22select"><select id="v22A"></select><select id="v22B"></select></div><div id="v22DayTrend"></div></div>';
+ const m=new Map();getSavedBills().forEach(x=>{const d=dateParts(x.time);if(!d)return;if(!m.has(d.key))m.set(d.key,{income:0,expense:0,savings:0});const v=m.get(d.key);if(x.direction==='收入'&&!isOffsetIncome(x))v.income+=effectiveIncomeAmount(x);if(x.direction==='支出'){if(x.transactionNature==='储蓄投资')v.savings+=Number(x.amount||0);else v.expense+=expenseNetAmount(x);}});
+ const keys=[...m.keys()].sort().slice(-12),vals=keys.map(k=>m.get(k)),max=Math.max(1,...vals.flatMap(v=>[v.income,v.expense,v.savings])),W=320,H=150,P=25,X=i=>P+i*(W-2*P)/Math.max(1,keys.length-1),Y=v=>H-P-v/max*(H-2*P);
+ const lines=['expense','income','savings'].map((k,i)=>'<polyline fill="none" stroke="'+['#3978f6','#16a36a','#e6a23c'][i]+'" stroke-width="2.5" points="'+keys.map((k,j)=>X(j)+','+Y(m.get(k)[['expense','income','savings'][i]])).join(' ')+'"/>').join('');
+ $('v22MonthTrend').innerHTML=keys.length?'<svg viewBox="0 0 '+W+' '+H+'" style="width:100%"><line x1="'+P+'" y1="'+(H-P)+'" x2="'+(W-P)+'" y2="'+(H-P)+'" stroke="#ddd"/>'+lines+keys.map((k,i)=>'<text x="'+X(i)+'" y="'+(H-5)+'" text-anchor="middle" font-size="8" fill="#8993a4">'+k.slice(5)+'</text>').join('')+'</svg><small class="muted">蓝：日常支出　绿：收入　橙：储蓄投资</small>':'暂无数据';
+ const opts=keys.slice().reverse().map(k=>'<option value="'+k+'">'+k+'</option>').join('');$('v22A').innerHTML=opts;$('v22B').innerHTML=opts;if(keys.length>1){$('v22A').value=keys[keys.length-1];$('v22B').value=keys[keys.length-2];}
+ function daily(){const ks=[$('v22A').value,$('v22B').value],ss=ks.map(k=>{const a=Array(31).fill(0);getSavedBills().forEach(x=>{const d=dateParts(x.time);if(d&&d.key===k&&x.direction==='支出'&&x.transactionNature!=='储蓄投资')a[Number(d.day)-1]+=expenseNetAmount(x);});return a;});const mx=Math.max(1,...ss.flat()),xx=i=>20+i*280/30,yy=v=>125-v/mx*100;$('v22DayTrend').innerHTML=ks.every(Boolean)?'<svg viewBox="0 0 320 140" style="width:100%">'+ss.map((a,i)=>'<polyline fill="none" stroke="'+(i?'#16a36a':'#3978f6')+'" stroke-width="2" points="'+a.map((v,j)=>xx(j)+','+yy(v)).join(' ')+'"/>').join('')+'</svg><small>'+ks.join(' 对比 ')+'</small>':'需要至少两个有数据的月份';}
+ $('v22A').onchange=daily;$('v22B').onchange=daily;daily();
+}
+const oldAnalysis=window.renderAnalysis;
+window.renderAnalysis=function(){if(oldAnalysis)oldAnalysis();extraBI();};
+function init(){
+ const nav=document.querySelector('nav.tabs');if(nav){['home','analysis','bills','mine'].forEach(id=>{const b=[...nav.querySelectorAll('button')].find(x=>(x.getAttribute('onclick')||'').includes("'"+id+"'"));if(b)nav.appendChild(b);});}
+ const st=document.createElement('style');st.textContent='.v22dim{display:grid;grid-template-columns:1fr 1fr;gap:7px}.v22dim button{display:flex;justify-content:space-between;border:1px solid var(--line);border-radius:9px;padding:9px;background:white;font-size:12px}.v22dim b{color:#c62828}.v22expand{background:#f7f9fc;border:1px solid #e8edf5;border-radius:10px;padding:9px;margin:4px 0 10px}.v22row{display:flex;justify-content:space-between;align-items:center;gap:8px;text-align:left;width:100%;border:0;border-bottom:1px solid var(--line);background:white;padding:10px 3px;font-size:12px}.v22row small{display:block;color:#8993a4;line-height:1.5;margin-top:4px}.v22select{display:grid;grid-template-columns:1fr 1fr;gap:8px}.v22select select{width:100%;padding:9px;border:1px solid var(--line);border-radius:8px;background:white}';document.head.appendChild(st);complete();
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
+})();
+</script>
 </body></html>
