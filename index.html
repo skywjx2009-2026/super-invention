@@ -360,8 +360,9 @@ function confirmImport(){
   bill.id=tradeNo||merchantNo||('import_'+signature);
   tradeNos.add(tradeNo);merchantNos.add(merchantNo);fullSignatures.add(signature);
   const originalCategory=bill.category;
+  if(category)bill.rawCategory=category;
+  if(typeof applySmartImportCategory==='function')applySmartImportCategory(bill);
   if(typeof applySavedMerchantRulesToBill==='function')applySavedMerchantRulesToBill(bill);
-  if(category)bill.category=originalCategory;
   added.push(bill);
  });
  const merged=existing.concat(added);
@@ -3003,6 +3004,57 @@ function applyETCTollCategory(bill){
   if(typeof priorHome==='function')window.renderHome=function(){priorHome.apply(this,arguments);renderAnnualTrend();};
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',renderAnnualTrend,{once:true});
   else renderAnnualTrend();
+})();
+</script>
+
+
+<script>
+/* MICROLEDGER_SMART_IMPORT_CLASSIFIER_V1
+   支付宝/微信导入通用商户与明细智能分类；保留原始分类，手动商户规则优先。 */
+(function(){
+var rules=[
+{c:'交通出行',s:'高速通行',k:['ETC通行费','ETC扣费','高速通行费','高速公路通行费','高速费','通行费','粤通卡','苏通卡','鲁通卡','高速收费']},
+{c:'交通出行',s:'打车',k:['滴滴出行','滴滴打车','花小猪','曹操出行','T3出行','享道出行','如祺出行','高德打车','网约车','出租车','打车']},
+{c:'交通出行',s:'加油',k:['中国石化','中石化','中国石油','中石油','壳牌加油','中海油','加油站','加油卡','加油充值','燃油']},
+{c:'交通出行',s:'停车缴费',k:['停车缴费','停车场','停车费','路边停车','智慧停车','停车服务','顺易通']},
+{c:'交通出行',s:'公共交通',k:['地铁乘车','公交乘车','公交车','地铁','公交','交通卡','乘车码','铁路12306','中国铁路','火车票','高铁票','客运站']},
+{c:'交通出行',s:'车辆维护',k:['汽车维修','车辆维修','洗车','汽车保养','轮胎','汽车美容','车险','车辆保险']},
+{c:'餐饮',s:'外卖',k:['美团外卖','饿了么','淘宝闪购','外卖订单','外卖']},
+{c:'餐饮',s:'零食饮品',k:['瑞幸咖啡','星巴克','库迪咖啡','喜茶','奈雪','蜜雪冰城','茶百道','古茗','咖啡','奶茶','面包','零食','饮品']},
+{c:'餐饮',s:'聚餐',k:['肯德基','麦当劳','必胜客','汉堡王','海底捞','餐饮','餐厅','饭店','酒楼','火锅','烧烤','小吃','美食']},
+{c:'餐饮',s:'早餐',k:['早餐']},{c:'餐饮',s:'午餐',k:['午餐']},{c:'餐饮',s:'晚餐',k:['晚餐']},
+{c:'居家生活',s:'水电燃气',k:['国家电网','南方电网','电费','水费','水务','自来水','燃气费','燃气缴费','天然气']},
+{c:'居家生活',s:'物业',k:['物业管理','物业费','物业服务']},{c:'居家生活',s:'家政维修',k:['家政','保洁','维修服务','家电维修','开锁','疏通']},
+{c:'居家生活',s:'日用品',k:['屈臣氏','名创优品','日用品','生活用品','便利店','全家便利店','罗森']},
+{c:'购物',s:'网购',k:['淘宝','天猫','京东','拼多多','唯品会','抖音商城','快手小店','苏宁易购','得物','闲鱼']},
+{c:'购物',s:'数码电器',k:['苹果在线商店','Apple Store','华为商城','小米商城','苏宁电器','国美电器','数码','手机专卖','电脑']},
+{c:'购物',s:'服饰鞋包',k:['优衣库','ZARA','H&M','耐克','阿迪达斯','李宁','安踏','服装','鞋','箱包']},
+{c:'购物',s:'日用百货',k:['沃尔玛','永辉超市','盒马','大润发','山姆会员店','Costco','超市','百货','商场']},
+{c:'医疗健康',s:'看病',k:['医院','门诊','诊所','挂号','医疗服务','住院']},{c:'医疗健康',s:'药品',k:['大参林','老百姓大药房','国大药房','益丰大药房','药店','药房','药品']},
+{c:'医疗健康',s:'体检',k:['体检中心','健康体检','体检']},
+{c:'娱乐',s:'电影演出',k:['猫眼电影','淘票票','万达影城','电影院','电影票','演出门票','演唱会']},{c:'娱乐',s:'游戏',k:['腾讯游戏','网易游戏','游戏充值','游戏点券']},
+{c:'娱乐',s:'旅游',k:['携程','同程旅行','去哪儿','飞猪','旅行社','景区门票','旅游']},{c:'娱乐',s:'休闲活动',k:['KTV','健身房','游乐园','密室逃脱','桌游']},
+{c:'教育',s:'课程培训',k:['学费','培训费','教育培训','课程','网课','学校缴费']},{c:'教育',s:'书籍资料',k:['新华书店','当当网','图书','书籍','教材']},
+{c:'通讯数码',s:'手机话费',k:['中国移动','中国联通','中国电信','话费充值','手机充值','通信缴费']},{c:'通讯数码',s:'网络通信',k:['宽带费','宽带缴费','网络服务费']},
+{c:'通讯数码',s:'软件会员',k:['腾讯视频','爱奇艺','优酷','芒果TV','网易云音乐','QQ音乐','WPS会员','软件会员','会员续费']},
+{c:'人情往来',s:'礼金',k:['红包','礼金','婚礼随礼','生日礼物']},{c:'人情往来',s:'请客送礼',k:['礼品','送礼','请客']},
+{c:'工资',s:'固定工资',k:['工资发放','工资','薪资']},{c:'奖金',s:'绩效奖金',k:['绩效奖金','绩效']},{c:'奖金',s:'年终奖金',k:['年终奖','年终奖金']},
+{c:'退款/报销',s:'费用报销',k:['费用报销','差旅报销','报销款']},{c:'理财收入',s:'理财收益',k:['理财收益','基金收益','利息收入','余额宝收益','收益发放']}
+];
+function norm(v){return String(v||'').toLowerCase().replace(/[\s\-—_·•，,。.!！?？:：/\\]/g,'');}
+window.applySmartImportCategory=function(bill){
+if(!bill||!bill.direction)return false;
+var text=norm([bill.counterparty,bill.product,bill.remark,bill.type,bill.sourceDetail].join(' '));
+if(!text)return false;
+for(var i=0;i<rules.length;i++){
+var rule=rules[i];
+if(['工资','奖金','退款/报销','理财收入'].includes(rule.c)&&bill.direction!=='收入')continue;
+if(!['工资','奖金','退款/报销','理财收入'].includes(rule.c)&&bill.direction!=='支出')continue;
+var hit=rule.k.find(function(k){return text.includes(norm(k));});
+if(hit){bill.category=rule.c;bill.subcategory=rule.s;bill.autoCategoryMatched=true;bill.autoCategoryRule=hit;return true;}
+}
+return false;
+};
 })();
 </script>
 
