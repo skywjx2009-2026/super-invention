@@ -1521,4 +1521,58 @@ function testRecognitionRules(){const text=String(document.getElementById('recog
 })();
 </script>
 
+
+<style id="global-modal-viewport-fix">
+/* 全局弹窗适配：面板不超出可视屏幕，内容在面板内滚动，避免关闭按钮被挤出屏幕。 */
+[id$="Modal"]{box-sizing:border-box;overscroll-behavior:contain}
+[id$="Modal"]>div:first-child,
+[id$="Modal"]>section{
+  box-sizing:border-box!important;
+  max-height:calc(100vh - 28px)!important;
+  max-height:calc(100dvh - 28px)!important;
+  min-height:0;
+  overflow-y:auto!important;
+  overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;
+}
+#classificationGuideModal{padding:10px!important;overflow:hidden}
+#classificationGuideModal>section{
+  width:min(540px,calc(100vw - 28px))!important;
+  max-height: min(76vh,680px)!important;
+  max-height:min(76dvh,680px)!important;
+  padding:14px!important;
+  border-radius:16px!important;
+}
+#classificationGuideModal>section>div:first-child{
+  position:sticky;top:-14px;z-index:2;
+  margin:-14px -14px 10px;
+  padding:12px 14px;
+  background:var(--card);
+  border-bottom:1px solid var(--line);
+}
+#classificationGuideModal>section>div:first-child button{
+  flex:0 0 auto;min-width:58px;min-height:40px;
+  position:relative;z-index:3;touch-action:manipulation;
+}
+@media(max-width:480px){
+ [id$="Modal"]{padding-top:max(10px,env(safe-area-inset-top))!important;padding-bottom:max(10px,env(safe-area-inset-bottom))!important}
+ #classificationGuideModal>section{width:calc(100vw - 24px)!important;max-height:74dvh!important;padding:12px!important}
+ #classificationGuideModal>section>div:first-child{top:-12px;margin:-12px -12px 9px;padding:10px 12px}
+}
+</style>
+<script>
+/* iOS Safari 视口变化时，确保所有打开的弹窗仍限制在可见区域。 */
+(function(){
+ function fitOpenModals(){
+  document.querySelectorAll('[id$="Modal"]').forEach(m=>{
+   if(getComputedStyle(m).display==='none')return;
+   const panel=m.querySelector(':scope > div:first-child,:scope > section');
+   if(panel){panel.style.maxHeight='calc(100dvh - 28px)';panel.style.overflowY='auto';}
+  });
+ }
+ window.addEventListener('resize',fitOpenModals,{passive:true});
+ window.addEventListener('orientationchange',()=>setTimeout(fitOpenModals,250),{passive:true});
+})();
+</script>
+
 </body></html>
