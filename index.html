@@ -2246,4 +2246,41 @@ body[data-theme="dark"] [id$="Modal"]>section:first-child>div:first-child{backgr
 })();
 </script>
 
+
+<script>
+/* MICROLEDGER_CUMULATIVE_SAVINGS_V1：首页同时展示所选期间与全历史累计储蓄投资 */
+(function(){
+ const card=document.querySelector('#homeSavingsAmount')?.closest('.card');
+ if(card&&!document.getElementById('homeSavingsCumulativeAmount')){
+   const row=document.createElement('div');
+   row.className='catrow';
+   row.style.cssText='margin-top:12px;padding-top:12px;border-top:1px solid var(--line)';
+   row.innerHTML='<span>累计储蓄投资</span><b id="homeSavingsCumulativeAmount">¥0.00</b>';
+   card.appendChild(row);
+   const note=document.createElement('small');
+   note.className='muted';
+   note.textContent='累计金额按本机已保存的全部历史储蓄投资支出计算，不受首页年月筛选影响';
+   card.appendChild(note);
+ }
+ const previous=window.renderHome;
+ if(typeof previous==='function'){
+   window.renderHome=function(){
+     previous();
+     const bills=getSavedBills();
+     const period=bills.filter(b=>b.direction==='支出'&&b.transactionNature==='储蓄投资'&&(()=>{
+       const d=dateParts(b.time);
+       return d&&(!homeYear||Number(d.year)===Number(homeYear))&&(!m||Number(d.month)===Number(m));
+     })()).reduce((sum,b)=>sum+Number(b.amount||0),0);
+     const cumulative=bills.filter(b=>b.direction==='支出'&&b.transactionNature==='储蓄投资')
+       .reduce((sum,b)=>sum+Number(b.amount||0),0);
+     const current=document.getElementById('homeSavingsAmount');
+     const total=document.getElementById('homeSavingsCumulativeAmount');
+     if(current)current.textContent=money(period);
+     if(total)total.textContent=money(cumulative);
+   };
+ }
+ if(typeof window.renderHome==='function')window.renderHome();
+})();
+</script>
+
 </body></html>
