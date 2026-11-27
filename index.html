@@ -2847,4 +2847,163 @@ function applyETCTollCategory(bill){
   }catch(e){console.warn('ETC通行费分类迁移未完成',e);}
 })();
 </script>
+
+<script>
+/* MICROLEDGER_GLOBAL_OFFSET_YEAR_FIX_V1
+   全局统一：所有账单分类收入汇总排除已关联冲销退款；明细仍保留红色追溯；
+   恢复账单分类年月筛选；首页增加跨年度收支趋势。 */
+(function(){
+  function categoryRows(bills, direction, category){
+    return bills.filter(function(x){
+      var c=categoryOfV2(x)||'未分类';
+      return x.direction===direction && c===category;
+    });
+  }
+  function categoryGroupHtml(category, direction, rows, sum){
+    var label=escapeHtml(category), count=rows.length;
+    return '<div class="microledger-category-group" data-category-group="'+escapeHtml(category)+'">'+
+      '<button type="button" class="microledger-category-trigger" data-category-name="'+encodeURIComponent(category)+'" data-category-direction="'+direction+'" aria-expanded="false" style="width:100%;text-align:left;padding:12px;margin:3px 0;display:flex;justify-content:space-between;gap:8px;font-size:13px;border:0;border-bottom:1px solid var(--line);background:var(--card);color:var(--text)">'+
+      '<span>'+label+'（'+count+'笔） · 查看明细 ›</span><b style="white-space:nowrap">¥'+sum.toFixed(2)+'</b></button></div>';
+  }
+  window.renderCategorySummary=function(){
+    loadCategoryConfig();
+    if(typeof refreshCategoryNameEditors==='function')refreshCategoryNameEditors();
+    var bills=window.billCategoryBaseRows||window.billFilteredRows||getSavedBills();
+    if(!Array.isArray(bills))bills=[];
+    var pending=bills.filter(function(x){return !categoryOfV2(x)||categoryOfV2(x)==='未分类';}).length;
+    var set=function(id,v){var e=document.getElementById(id);if(e)e.textContent=v;};
+    set('catTotal',bills.length);set('catDone',bills.length-pending);set('catPending',pending);
+    function build(cats,direction,includePending){
+      var names=[...new Set([...(cats||[]),...bills.filter(function(x){return x.direction===direction;}).map(function(x){return categoryOfV2(x)||'未分类';})])];
+      var html='';
+      names.forEach(function(category){
+        if(category==='未分类')return;
+        var rows=categoryRows(bills,direction,category);
+        if(!rows.length)return;
+        var sum=rows.reduce(function(total,x){
+          if(direction==='支出')return total+expenseNetAmount(x);
+          return total+effectiveIncomeAmount(x);
+        },0);
+        html+=categoryGroupHtml(category,direction,rows,sum);
+      });
+      if(includePending){
+        var rows=categoryRows(bills,direction,'未分类');
+        if(rows.length){
+          var sum=rows.reduce(function(total,x){return total+(direction==='支出'?expenseNetAmount(x):effectiveIncomeAmount(x));},0);
+          html+=categoryGroupHtml('未分类',direction,rows,sum);
+        }
+      }
+      return html||'<p class="muted">暂无账单</p>';
+    }
+    var expense=document.getElementById('expenseCategorySummary');
+    var income=document.getElementById('incomeCategorySummary');
+    if(expense)expense.innerHTML=build(EXPENSE_CATEGORIES,'支出',true);
+    if(income)income.innerHTML=build(INCOME_CATEGORIES.filter(function(x){return x!=='冲销抵账';}),'收入',true);
+    var box=document.getElementById('categoryDetails');
+    if(box){
+      var owners=(OWNER_OPTIONS_V2||[]).map(function(owner){
+        var rows=bills.filter(function(x){return x.direction==='支出'&&categoryOfV2(x)!=='未分类'&&ownerOfV2(x)===owner;});
+        return '<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line);font-size:13px"><span>'+escapeHtml(owner)+'（'+rows.length+'笔）</span><b>'+money(rows.reduce(function(n,x){return n+expenseNetAmount(x);},0))+'</b></div>';
+      }).join('');
+      box.innerHTML='<b>按消费归属汇总（支出）</b>'+owners;
+    }
+  };
+  window.showCategoryDetails=function(encodedCategory,direction){
+    var category=decodeURIComponent(encodedCategory);
+    var parent=document.getElementById(direction==='收入'?'incomeCategorySummary':'expenseCategorySummary');
+    if(!parent)return;
+    var group=Array.from(parent.querySelectorAll('.microledger-category-group')).find(function(g){return g.dataset.categoryGroup===category;});
+    if(!group)return;
+    var trigger=group.querySelector('.microledger-category-trigger');
+    var existing=group.querySelector(':scope > .microledger-category-detail-panel');
+    if(existing){existing.remove();trigger.setAttribute('aria-expanded','false');return;}
+    var year=document.getElementById('billYear')?.value||'';
+    var month=document.getElementById('billMonth')?.value||'';
+    var keyword=(document.getElementById('billSearch')?.value||'').trim().toLowerCase();
+    var source=window.billCategoryBaseRows||window.billFilteredRows||getSavedBills();
+    var rows=source.filter(function(x){
+      var c=categoryOfV2(x)||'未分类';
+      return x.direction===direction&&c===category;
+    }).filter(function(x){
+      var d=dateParts(x.time);
+      if(year&&(!d||d.year!==year))return false;
+      if(month&&(!d||d.month!==month))return false;
+      if(keyword&&![x.counterparty,x.product,x.remark,x.category].join(' ').toLowerCase().includes(keyword))return false;
+      return true;
+    }).sort(function(a,b){return String(b.time||'').localeCompare(String(a.time||''));});
+    var panel=document.createElement('div');
+    panel.className='microledger-category-detail-panel';
+    panel.style.cssText='margin:4px 0 12px;padding:8px 12px;background:var(--bg);border:1px solid var(--line);border-radius:10px';
+    panel.innerHTML='<div style="font-weight:700;font-size:13px;padding:5px 0 9px">明细 · '+rows.length+'笔</div>'+
+      (rows.length?rows.map(function(x){
+        var linked=!!x.refundForId||(direction==='支出'&&refundLinkedAmount(x.id)>0);
+        var amount=direction==='支出'?expenseNetAmount(x):Number(x.amount||0);
+        var detail=direction==='收入'&&isOffsetIncome(x)?' · 已冲销，不计入收入':'';
+        return '<button type="button" data-category-bill-id="'+encodeURIComponent(x.id)+'" style="display:flex;justify-content:space-between;align-items:center;gap:10px;width:100%;text-align:left;background:'+(linked?'#fff7f6':'transparent')+';color:'+(linked?'#c62828':'var(--text)')+';border:0;border-bottom:1px solid var(--line);padding:11px 2px">'+
+          '<span style="min-width:0"><b style="display:block;color:'+(linked?'#c62828':'var(--text)')+'">'+escapeHtml(x.counterparty||x.product||'未填写交易对象')+'</b>'+
+          '<small style="display:block;margin-top:4px;color:'+(linked?'#c62828':'var(--muted)')+'">'+escapeHtml(x.time||'')+' · '+escapeHtml(x.product||x.category||'')+(linked?' · 已关联冲销':'')+detail+'</small>'+
+          (linked&&direction==='支出'?'<small style="display:block;color:#c62828;margin-top:3px">原始支出 '+money(x.amount)+' · 冲销后 '+money(amount)+'</small>':'')+'</span>'+
+          '<b style="white-space:nowrap;color:'+(linked?'#c62828':'var(--text)')+'">'+(direction==='支出'?'-':'+')+money(amount)+'</b></button>';
+      }).join(''):'<p class="muted" style="padding:8px 0">当前筛选条件下没有该分类账单。</p>');
+    group.appendChild(panel);
+    trigger.setAttribute('aria-expanded','true');
+  };
+  // 让分类明细账单行继续支持原有详情点击。
+  document.addEventListener('click',function(e){
+    var row=e.target.closest('[data-category-bill-id]');
+    if(row&&row.dataset.categoryBillId)openBillDetail(decodeURIComponent(row.dataset.categoryBillId));
+  });
+
+  // 包装账单列表渲染，确保年月标签每次都按本机账单重建，不受历史函数覆盖影响。
+  var priorBills=window.renderBills;
+  if(typeof priorBills==='function'){
+    window.renderBills=function(){
+      priorBills.apply(this,arguments);
+      var bills=getSavedBills(),yearEl=document.getElementById('billYear'),monthEl=document.getElementById('billMonth');
+      var years=[...new Set(bills.map(function(x){return dateParts(x.time)?.year;}).filter(Boolean))].sort(function(a,b){return String(b).localeCompare(String(a));});
+      var oldYear=yearEl?.value||'',oldMonth=monthEl?.value||'';
+      if(yearEl){
+        yearEl.innerHTML='<option value="">全部年份</option>'+years.map(function(y){return '<option value="'+y+'">'+y+'年</option>';}).join('');
+        yearEl.value=years.includes(oldYear)?oldYear:'';
+      }
+      if(monthEl)monthEl.value=oldMonth;
+      var style='border:1px solid var(--line);border-radius:18px;padding:7px 10px;font-size:13px;background:var(--card);color:var(--text);';
+      var yt=document.getElementById('billYearTags'),mt=document.getElementById('billMonthTags');
+      if(yt)yt.innerHTML=years.map(function(y){return '<button type="button" onclick="setBillYearTag('+Number(y)+')" style="'+style+((yearEl?.value||'')===String(y)?'background:#eaf2ff;border-color:#3978f6;color:#245fc7;font-weight:700;':'')+'">'+y+'年</button>';}).join('')||'<span class="muted">暂无年份数据</span>';
+      if(mt)mt.innerHTML=Array.from({length:12},function(_,i){var mm=String(i+1).padStart(2,'0');return '<button type="button" onclick="setBillMonthTag('+(i+1)+')" style="'+style+((monthEl?.value||'')===mm?'background:#eaf2ff;border-color:#3978f6;color:#245fc7;font-weight:700;':'')+'">'+(i+1)+'月</button>';}).join('');
+    };
+  }
+
+  // 首页保留现有月度趋势，在其正下方增加跨年度趋势（所有账单年份）。
+  function renderAnnualTrend(){
+    var trend=document.getElementById('homeTrend');
+    if(!trend)return;
+    var section=document.getElementById('homeAnnualTrendSection');
+    var card=document.getElementById('homeAnnualTrend');
+    if(!section){
+      section=document.createElement('div');section.className='section';section.id='homeAnnualTrendSection';
+      section.innerHTML='<h2>年度收支趋势</h2><span>全部账单年份</span>';
+      card=document.createElement('div');card.className='card';card.id='homeAnnualTrend';
+      trend.insertAdjacentElement('afterend',section);section.insertAdjacentElement('afterend',card);
+    }
+    var bills=getSavedBills(),years=[...new Set(bills.map(function(x){return dateParts(x.time)?.year;}).filter(Boolean))].sort(function(a,b){return String(a).localeCompare(String(b));});
+    if(!years.length){card.innerHTML='<p class="muted">导入账单后显示年度趋势</p>';return;}
+    var totals=years.map(function(year){
+      var rows=bills.filter(function(x){var d=dateParts(x.time);return d&&d.year===year;});
+      return {year:year,income:rows.filter(function(x){return x.direction==='收入'&&!isOffsetIncome(x);}).reduce(function(n,x){return n+effectiveIncomeAmount(x);},0),
+        expense:rows.filter(function(x){return x.direction==='支出';}).reduce(function(n,x){return n+expenseNetAmount(x);},0)};
+    });
+    var max=Math.max(1,...totals.flatMap(function(x){return [x.income,x.expense];}));
+    card.innerHTML='<div style="display:flex;gap:14px;font-size:11px;color:var(--muted);margin-bottom:12px"><span><i class="dot"></i>收入</span><span><i class="dot blue"></i>支出</span></div>'+
+      totals.map(function(x){return '<div style="padding:8px 0;border-bottom:1px solid var(--line)"><div style="display:flex;justify-content:space-between;gap:8px;font-size:13px;margin-bottom:7px"><b>'+x.year+'年</b><span>收入 '+money(x.income)+'　支出 '+money(x.expense)+'</span></div>'+
+        '<div style="display:flex;gap:4px;height:10px;margin-bottom:5px"><div style="height:10px;width:'+(x.income/max*100)+'%;background:#91b5ff;border-radius:5px"></div></div>'+
+        '<div style="display:flex;gap:4px;height:10px"><div style="height:10px;width:'+(x.expense/max*100)+'%;background:#3978f6;border-radius:5px"></div></div></div>';}).join('');
+  }
+  var priorHome=window.renderHome;
+  if(typeof priorHome==='function')window.renderHome=function(){priorHome.apply(this,arguments);renderAnnualTrend();};
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',renderAnnualTrend,{once:true});
+  else renderAnnualTrend();
+})();
+</script>
+
 </body></html>
