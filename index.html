@@ -1399,4 +1399,106 @@ function testRecognitionRules(){const text=String(document.getElementById('recog
 })();
 </script>
 
+
+<script>
+/* V2.1：交易性质（储蓄投资与日常收支分开）+ 消费归属 + 面向所有使用者的分类说明。 */
+(function(){
+ const MIG='expense_assistant_finance_nature_migration_20261127';
+ const OWNERS=['本人','老婆','小孩','家庭共用','未指定'];
+ const NATURES=['日常收支','储蓄投资'];
+ const PURPOSES=['日常消费','储蓄规划','育儿基金','理财投资','保险保障','资金转移'];
+ const textOf=b=>[b.counterparty,b.product,b.remark,b.type,b.status].map(v=>String(v||'')).join(' ').toLowerCase();
+ function infer(b){
+  const t=textOf(b);
+  const childFund=/育儿基金|儿童基金|孩子基金|教育基金|教育储蓄|宝宝基金/.test(t);
+  const savings=childFund||/定期存款|定期储蓄|零存整取|教育储蓄|基金定投|储蓄计划|存款计划|每月存入/.test(t)||(/存入|转入/.test(t)&&/储蓄|存款|基金|教育金|育儿金/.test(t));
+  let purpose=childFund?'育儿基金':(/保险|保费|寿险|重疾险|意外险/.test(t)?'保险保障':(/基金|理财|证券|股票|投资/.test(t)?'理财投资':(savings?'储蓄规划':'日常消费')));
+  let owner=String(b.owner||'').trim();
+  if(/宝宝|婴儿|儿童|小孩|奶粉|尿不湿|纸尿裤|母婴|早教|幼儿园|育儿基金|儿童基金|孩子基金|教育基金/.test(t))owner='小孩';
+  else if(/老婆|妻子|爱人|太太/.test(t))owner='老婆';
+  else if(/本人|自己/.test(t))owner='本人';
+  if(owner==='家庭公用'||owner==='家庭共同'||owner==='全家')owner='家庭共用';
+  if(!OWNERS.includes(owner))owner='未指定';
+  return {savings,purpose,owner};
+ }
+ window.isSavingsInvestmentBill=function(b){return !!(b&&b.direction==='支出'&&b.transactionNature==='储蓄投资');};
+ const originalExpenseNetAmount=window.expenseNetAmount||expenseNetAmount;
+ window.expenseNetAmount=function(b){return window.isSavingsInvestmentBill(b)?0:originalExpenseNetAmount(b);};
+ expenseNetAmount=window.expenseNetAmount;
+ function saveBills(bills){localStorage.setItem(WECHAT_STORE_KEY,JSON.stringify(bills));savedBillsCacheRaw=null;getSavedBills();}
+ function addGuide(){
+  const mine=document.getElementById('mine');if(!mine||document.getElementById('classificationGuideEntry'))return;
+  const anchor=mine.querySelector('button[onclick="openCategorySettingsV3()"]');
+  const row='<button type="button" id="classificationGuideEntry" class="tx" onclick="openClassificationGuide()" style="width:100%;border:0;border-top:1px solid var(--line);background:white;text-align:left;padding:12px 0"><div class="icon">📘</div><div class="txmain"><b>分类与记账使用说明</b><small>查看分类定义、消费归属和储蓄投资的记账规则</small></div><span>›</span></button>';
+  if(anchor)anchor.insertAdjacentHTML('beforebegin',row);else mine.querySelector('.card')?.insertAdjacentHTML('beforeend',row);
+  const modal=document.createElement('div');modal.id='classificationGuideModal';modal.style.cssText='display:none;position:fixed;inset:0;z-index:1500;background:#10182899;padding:16px;box-sizing:border-box;align-items:center;justify-content:center';
+  modal.innerHTML='<section style="width:min(620px,100%);max-height:88vh;overflow:auto;background:var(--card);color:var(--text);border-radius:18px;padding:18px;box-sizing:border-box"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><b style="font-size:18px">分类与记账使用说明</b><button type="button" onclick="closeClassificationGuide()" style="border:0;border-radius:20px;padding:8px 12px">关闭</button></div><p class="muted" style="line-height:1.7">本助手采用「一级分类 + 消费归属 + 交易性质」三层记录方式。分类回答钱花在什么方面；消费归属回答这笔钱主要属于谁；交易性质区分日常消费与储蓄投资。</p><h3>一、支出一级分类（10类）</h3><div style="font-size:13px;line-height:1.85"><b>1. 餐饮美食</b>：正餐、外卖、早餐、奶茶、咖啡、水果、零食等。<br><b>2. 居住生活</b>：房租物业、水电燃气、家庭日用品、家政、家庭维修等。<br><b>3. 交通出行</b>：公交地铁、打车、加油、停车、高速费、汽车维修保养及车险等。<br><b>4. 购物消费</b>：衣服鞋包、数码产品、家电、网购及非日常家庭消耗品等。<br><b>5. 育儿教育</b>：奶粉、尿不湿、母婴用品、托育、幼儿园、学费、课程、儿童玩具绘本等。<br><b>6. 医疗健康</b>：医院、药品、挂号、体检、牙科、疫苗及医疗服务等。<br><b>7. 休闲娱乐</b>：旅游、酒店、电影、游戏、演出、健身及娱乐活动等。<br><b>8. 人情社交</b>：红包、礼金、随礼、送礼、请客及社交聚会等。<br><b>9. 金融保险</b>：人寿保险、重疾险、意外险、理财、基金及储蓄规划等金融类事项。<br><b>10. 其他支出</b>：确实无法归入以上类别的支出。尽量不要把有明确用途的交易都放进此类。</div><h3>二、收入分类</h3><p class="muted" style="font-size:13px;line-height:1.8">工资、奖金、理财收入、退款/报销、其他收入。另有系统专用的「冲销抵账」，用于关联原始支出退款，不作为普通收入统计。</p><h3>三、消费归属（5个标签）</h3><p class="muted" style="font-size:13px;line-height:1.8"><b>本人</b>：主要由本人使用；<b>老婆</b>：主要由配偶使用；<b>小孩</b>：孩子相关开支或资金安排；<b>家庭共用</b>：全家共同使用；<b>未指定</b>：无法判断或暂时不确定。归属标签不是第二级分类，不改变支出类别。</p><h3>四、交易性质：日常收支 / 储蓄投资</h3><p class="muted" style="font-size:13px;line-height:1.8"><b>日常收支</b>：实际消费、账单支付及普通收入，按正常收支统计。<br><b>储蓄投资</b>：转入储蓄、定期存款、育儿基金、教育金或投资账户的资金。它不是家庭已经消费掉的钱，因此不计入「日常支出」，而单独统计储蓄投资金额。若只是本人不同账户之间转账，应标记为储蓄投资/资金转移，不要重复算作消费；取回本金也不要当作工资等新增收入。</p><h3>五、典型例子</h3><div style="background:var(--soft,#f5f7fb);border-radius:10px;padding:11px;font-size:13px;line-height:1.8">每月给孩子存入育儿基金 2,000 元：<br>一级分类：<b>金融保险</b><br>消费归属：<b>小孩</b><br>交易性质：<b>储蓄投资</b><br>用途标签：<b>育儿基金</b><br>累计存 3 年：72,000 元。该金额单独看作家庭资金积累，不计入日常消费支出。</div><h3>六、自动分类提醒</h3><p class="muted" style="font-size:13px;line-height:1.8">系统会根据交易对象、商品和备注中的关键词辅助判断，但自动分类不保证百分之百准确。遇到信息不足、商户名称含糊或金额性质不清楚的记录，请打开账单详情手动调整。尤其「转账」「存入」可能是账户间资金移动，不应仅凭一个词就判断为消费。</p><p class="muted" style="font-size:12px;line-height:1.6">数据保存在当前设备浏览器中。更换设备或清理浏览器数据前，请先使用「备份与恢复」导出备份。</p></section>';
+  modal.addEventListener('click',e=>{if(e.target===modal)window.closeClassificationGuide();});document.body.appendChild(modal);
+ }
+ window.openClassificationGuide=function(){const m=document.getElementById('classificationGuideModal');if(m)m.style.display='flex';};
+ window.closeClassificationGuide=function(){const m=document.getElementById('classificationGuideModal');if(m)m.style.display='none';};
+ function addManualFields(){
+  const modal=document.getElementById('manualEntryModal'),grid=modal?.querySelector('div[style*="display:grid"]');if(!grid||document.getElementById('manualNature'))return;
+  grid.insertAdjacentHTML('beforeend','<label style="font-size:13px;min-width:0">交易性质<div class="manual-select-wrap"><select id="manualNature" class="manual-field-control"><option value="日常收支">日常收支</option><option value="储蓄投资">储蓄投资</option></select></div></label><label style="font-size:13px;min-width:0">消费归属<div class="manual-select-wrap"><select id="manualOwner" class="manual-field-control">'+OWNERS.map(x=>'<option value="'+x+'">'+x+'</option>').join('')+'</select></div></label><label style="font-size:13px;min-width:0">用途标签<div class="manual-select-wrap"><select id="manualPurpose" class="manual-field-control">'+PURPOSES.map(x=>'<option value="'+x+'">'+x+'</option>').join('')+'</select></div></label>');
+  document.getElementById('manualNature').addEventListener('change',()=>{const n=document.getElementById('manualNature').value;if(n==='储蓄投资'){const c=document.getElementById('manualCategory');if(c&&c.value!=='金融保险'&&[...c.options].some(o=>o.value==='金融保险'))c.value='金融保险';}});
+ }
+ const oldOpenManualEntry=window.openManualEntry;
+ window.openManualEntry=function(){oldOpenManualEntry();addManualFields();document.getElementById('manualNature').value='日常收支';document.getElementById('manualOwner').value='未指定';document.getElementById('manualPurpose').value='日常消费';};
+ window.saveManualEntry=function(){
+  const direction=document.getElementById('manualDirection').value,amount=Number(document.getElementById('manualAmount').value),timeRaw=document.getElementById('manualTime').value;
+  if(!Number.isFinite(amount)||amount<=0)return alert('请输入大于 0 的有效金额。');if(!timeRaw)return alert('请选择交易日期。');
+  const d=new Date(timeRaw);if(Number.isNaN(d.getTime()))return alert('交易日期格式无效。');
+  const time=localDateTimeValue(d).replace('T',' ')+':00',category=document.getElementById('manualCategory').value,payment=document.getElementById('manualPayment').value,remark=String(document.getElementById('manualRemark').value||'').trim();
+  const nature=document.getElementById('manualNature')?.value||'日常收支',owner=document.getElementById('manualOwner')?.value||'未指定',purpose=document.getElementById('manualPurpose')?.value||'日常消费';
+  if(nature==='储蓄投资'&&direction!=='支出')return alert('储蓄投资记录请以资金转出/存入账户的支出方向记录；取回本金不要记为工资收入。');
+  const id='manual_'+Date.now()+'_'+Math.random().toString(36).slice(2,8),bill={id,time,type:'手动记账',counterparty:'',product:'',direction,amount,payment,status:'已确认',tradeNo:'',merchantNo:'',remark,category:nature==='储蓄投资'?'金融保险':category,source:'手动录入',transactionNature:nature,owner,purposeTag:purpose};
+  const bills=getSavedBills();bills.push(bill);try{saveBills(bills);rememberCategoryUsage(bills);}catch(e){return alert('本机存储失败，未能保存这笔账单。');}
+  closeManualEntry();refreshAfterCategoryChange();alert(nature==='储蓄投资'?'已保存储蓄投资记录：'+money(amount)+'。该笔金额不会计入日常支出。':'已保存这笔'+direction+'：'+money(amount));
+ };
+ const oldApply=window.applySavedMerchantRulesToBill;
+ window.applySavedMerchantRulesToBill=function(bill){
+  const matched=oldApply?oldApply(bill):false;
+  if(bill&&bill.direction==='支出'){
+   const v=infer(bill);
+   bill.transactionNature=v.savings?'储蓄投资':'日常收支';
+   bill.purposeTag=v.purpose;
+   bill.owner=v.owner;
+   if(v.purpose==='育儿基金'||v.purpose==='储蓄规划'||v.purpose==='理财投资'||v.purpose==='保险保障')bill.category='金融保险';
+   if(!matched&&bill.transactionNature!=='储蓄投资'&&(!bill.category||bill.category==='未分类'))bill.category=(typeof inferCategory==='function'?inferCategory(bill):'其他支出');
+  }else if(bill){bill.transactionNature='日常收支';bill.purposeTag='日常消费';}
+  return true;
+ };
+ applySavedMerchantRulesToBill=window.applySavedMerchantRulesToBill;
+ const originalOpenBillDetail=window.openBillDetail;
+ window.openBillDetail=function(encodedId){
+  const id=decodeURIComponent(encodedId),x=getSavedBills().find(v=>v.id===id);if(!x)return;
+  originalOpenBillDetail(encodedId);
+  const box=document.getElementById('billDetailContent');if(!box)return;
+  if(!x.transactionNature)x.transactionNature='日常收支';if(!x.owner)x.owner='未指定';if(!x.purposeTag)x.purposeTag='日常消费';
+  const fields='<div style="display:grid;grid-template-columns:1fr;gap:10px;margin-top:14px"><label class="muted">交易性质<select id="detailNature" style="display:block;width:100%;padding:12px;border:1px solid var(--line);border-radius:9px;margin-top:6px;background:white"><option value="日常收支">日常收支</option><option value="储蓄投资">储蓄投资</option></select></label><label class="muted">消费归属<select id="detailOwner" style="display:block;width:100%;padding:12px;border:1px solid var(--line);border-radius:9px;margin-top:6px;background:white">'+OWNERS.map(v=>'<option value="'+v+'">'+v+'</option>').join('')+'</select></label><label class="muted">用途标签<select id="detailPurpose" style="display:block;width:100%;padding:12px;border:1px solid var(--line);border-radius:9px;margin-top:6px;background:white">'+PURPOSES.map(v=>'<option value="'+v+'">'+v+'</option>').join('')+'</select></label><button type="button" onclick="saveBillNatureAndOwner()" style="width:100%;border:0;border-radius:9px;background:#3978f6;color:white;padding:12px;font-weight:700">保存交易性质与归属</button></div>';
+  box.insertAdjacentHTML('beforeend',fields);document.getElementById('detailNature').value=x.transactionNature;document.getElementById('detailOwner').value=OWNERS.includes(x.owner)?x.owner:'未指定';document.getElementById('detailPurpose').value=PURPOSES.includes(x.purposeTag)?x.purposeTag:'日常消费';
+ };
+ window.saveBillNatureAndOwner=function(){
+  if(!activeBillId)return;const bills=getSavedBills(),b=bills.find(x=>x.id===activeBillId);if(!b)return;
+  const nature=document.getElementById('detailNature').value,owner=document.getElementById('detailOwner').value,purpose=document.getElementById('detailPurpose').value;
+  if(nature==='储蓄投资'&&b.direction!=='支出')return alert('储蓄投资记录请以资金转出/存入账户的支出方向记录。');
+  b.transactionNature=nature;b.owner=owner;b.purposeTag=purpose;if(nature==='储蓄投资')b.category='金融保险';
+  saveBills(bills);refreshAfterCategoryChange();openBillDetail(encodeURIComponent(activeBillId));
+ };
+ /* 对已有本机账单只做一次增量标记；不覆盖已有人工选择的交易性质。 */
+ if(!localStorage.getItem(MIG)){
+  const bills=getSavedBills();let marked=0;
+  bills.forEach(b=>{if(!b||b.direction!=='支出')return;const v=infer(b);if(!b.transactionNature){b.transactionNature=v.savings?'储蓄投资':'日常收支';marked++;}if(!b.purposeTag)b.purposeTag=v.purpose;if(!b.owner||!OWNERS.includes(b.owner))b.owner=v.owner;if(v.purpose==='育儿基金'&&b.category!=='金融保险')b.category='金融保险';});
+  saveBills(bills);localStorage.setItem(MIG,JSON.stringify({at:new Date().toISOString(),marked}));
+ }
+ addGuide();addManualFields();
+ document.getElementById('home')?.insertAdjacentHTML('beforeend','<div class="card" style="margin-top:10px"><div class="catrow"><span>本期储蓄投资</span><b id="homeSavingsAmount">¥0.00</b></div><small class="muted">不计入日常支出，单独反映家庭资金积累</small></div>');
+ document.getElementById('analysis')?.insertAdjacentHTML('beforeend','<div class="card" style="margin-top:10px"><div class="catrow"><span>筛选范围内储蓄投资</span><b id="biSavingsAmount">¥0.00</b></div><small class="muted">储蓄投资与日常消费分开统计</small></div>');
+ const oldRenderHome=window.renderHome;
+ window.renderHome=function(){oldRenderHome();const node=document.getElementById('homeSavingsAmount');if(node){const rows=getSavedBills().filter(b=>b.direction==='支出'&&b.transactionNature==='储蓄投资'&&(()=>{const d=dateParts(b.time);return d&&(!homeYear||Number(d.year)===Number(homeYear))&&(!m||Number(d.month)===Number(m));})());node.textContent=money(rows.reduce((a,b)=>a+Number(b.amount||0),0));}};
+ const oldRenderAnalysis=window.renderAnalysis;
+ window.renderAnalysis=function(){oldRenderAnalysis();const node=document.getElementById('biSavingsAmount');if(node){const rows=(window.analysisFilteredBills||[]).filter(b=>b.direction==='支出'&&b.transactionNature==='储蓄投资');node.textContent=money(rows.reduce((a,b)=>a+Number(b.amount||0),0));}};
+})();
+</script>
+
 </body></html>
