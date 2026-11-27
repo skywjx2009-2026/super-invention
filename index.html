@@ -1913,7 +1913,7 @@ body[data-theme="dark"] [id$="Modal"]>section:first-child>div:first-child{backgr
   return out;
  }
  function selectedRows(){
-  const y=Number(homeYear||currentYear()),m=window.m==null?null:Number(window.m);
+  const y=Number(homeYear||currentYear()),selectedMonth=m==null?null:Number(m);
   return homeRows().filter(x=>{const d=dateKey(x);return d&&d.year===y&&(!selectedMonth||d.month===selectedMonth);});
  }
  function renderTrend(year,months){
@@ -1947,7 +1947,7 @@ body[data-theme="dark"] [id$="Modal"]>section:first-child>div:first-child{backgr
  function renderHomeV3(){
   if(typeof priorRender==='function')priorRender();
   const now=currentYear();
-  if(!window.homeMonthInitialized){window.homeYear=now;window.m=new Date().getMonth()+1;window.homeMonthInitialized=true;}
+  if(!window.homeMonthInitialized){homeYear=now;m=new Date().getMonth()+1;window.homeMonthInitialized=true;}
   // 首页月份选择固定在当前年度；全年视图为1—12月。
   if(!homeYear)homeYear=now;
   const year=Number(homeYear),month=m==null?null:Number(m);
