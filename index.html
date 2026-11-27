@@ -344,7 +344,7 @@ function confirmImport(){
   const amount=Number(rawAmount.replace(/[￥¥,，\\s元]/g,''));
   if(!time||!Number.isFinite(amount)||amount<=0||!['支出','收入'].includes(direction)){invalidCount++;return;}
   const category=val(r,'category'),remark=val(r,'remark'),account=val(r,'account'),sourceDetail=val(r,'sourceDetail'),tag=val(r,'tag');
-  const payment=val(r,'payment')||account,status=val(r,'status'),tradeNo=val(r,'tradeNo'),merchantNo=val(r,'merchantNo');
+  const payment=val(r,'payment'),status=val(r,'status'),tradeNo=val(r,'tradeNo'),merchantNo=val(r,'merchantNo');
   const bill={id:'',time,type:type||(p.sourceType==='微信账单'?'微信支付账单':'支付宝账单'),counterparty,product:product||remark,direction,amount,payment,status,tradeNo,merchantNo,remark,category:category||'未分类',account,sourceDetail,tag,source:p.fileName,importPlatform:p.sourceType};
   const signature=fullSignature(bill),duplicated=(tradeNo&&tradeNos.has(tradeNo))||(merchantNo&&merchantNos.has(merchantNo))||fullSignatures.has(signature);
   if(duplicated){duplicateCount++;return;}
