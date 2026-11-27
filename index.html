@@ -965,6 +965,7 @@ function restoreAppBackup(mergeBills){
   });
   localStorage.setItem(WECHAT_STORE_KEY,JSON.stringify(latest));
   rememberCategoryUsage(latest);
+  rememberRecentCategoryUse(bill.direction,value);
   renderBills();renderCategorySummary();renderHome();renderAnalysis();
   const modal=document.getElementById('billDetailModal');if(modal)modal.style.display='none';
   activeBillId=null;
