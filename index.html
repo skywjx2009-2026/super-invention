@@ -1630,8 +1630,8 @@ function testRecognitionRules(){const text=String(document.getElementById('recog
  const PURPOSES=['日常消费','储蓄规划','育儿基金','理财投资','保险保障','资金转移'];
  const purposeTags=x=>{const v=x&&x.purposeTag;if(Array.isArray(v))return [...new Set(v.map(z=>String(z||'').trim()).filter(Boolean))];return String(v||'').trim()?String(v).split(/[|,，]/).map(z=>z.trim()).filter(Boolean):[];};
  const rowsNow=()=>window.billFilteredRows||getSavedBills();
- const amountParts=rows=>({expense:rows.filter(x=>x.direction==='支出').reduce((n,x)=>n+expenseNetAmount(x),0),income:rows.filter(x=>x.direction==='收入'&&!isOffsetIncome(x)).reduce((n,x)=>n+effectiveIncomeAmount(x),0)});
- const moneyParts=rows=>{const a=amountParts(rows);return '支出 '+money(a.expense)+'　·　收入 '+money(a.income);};
+ const amountParts=rows=>({expense:rows.filter(x=>x.direction==='支出'&&x.transactionNature!=='储蓄投资').reduce((n,x)=>n+expenseNetAmount(x),0),savings:rows.filter(x=>x.direction==='支出'&&x.transactionNature==='储蓄投资').reduce((n,x)=>n+Number(x.amount||0),0),income:rows.filter(x=>x.direction==='收入'&&!isOffsetIncome(x)).reduce((n,x)=>n+effectiveIncomeAmount(x),0)});
+ const moneyParts=rows=>{const a=amountParts(rows);return '日常支出 '+money(a.expense)+'　·　储蓄投资 '+money(a.savings)+'　·　收入 '+money(a.income);};
  const billRow=x=>'<button type="button" class="v22row" data-v22-open="'+encodeURIComponent(x.id)+'"><span><b>'+E(x.counterparty||x.product||'未填写交易对象')+'</b><small>'+E(x.time||'')+' · 一级分类：'+E(x.category||'未分类')+' · '+E(x.payment||'支付方式未填')+'</small><small>'+E('性质：'+(x.transactionNature||'未分类')+' · 归属：'+(x.owner||'未分类')+' · 用途：'+(purposeTags(x).join('、')||'未分类'))+'</small></span><b>查看并修改 ›</b></button>';
  function addStickyPanel(trigger,title,rows){
   const parent=trigger.parentElement;
@@ -1660,7 +1660,7 @@ function testRecognitionRules(){const text=String(document.getElementById('recog
    const groups=d.values.map(v=>({name:v,rows:b.filter(x=>d.get(x).includes(v))})).filter(g=>g.rows.length);
    const missing=b.filter(x=>!d.get(x).length);
    if(missing.length)groups.push({name:'未分类',rows:missing,missing:true});
-   return '<div class="section"><h2>'+E(d.title)+'</h2><span>笔数 · 支出 · 收入 · 点击展开</span></div><div class="card v22dimension-card" data-dimension="'+d.key+'">'+(groups.length?groups.map(g=>{const a=amountParts(g.rows);return '<button type="button" class="v22group" data-dim-key="'+d.key+'" data-dim-value="'+encodeURIComponent(g.name)+'"><span><b>'+(g.missing?'🔴 ':'')+E(g.name)+'</b><small>'+g.rows.length+'笔</small></span><span class="v22amounts"><b>支出 '+money(a.expense)+'</b><small>收入 '+money(a.income)+'</small></span><span>查看 ›</span></button>';}).join(''):'<p class="muted">暂无账单</p>')+'</div>';
+   return '<div class="section"><h2>'+E(d.title)+'</h2><span>笔数 · 支出 · 收入 · 点击展开</span></div><div class="card v22dimension-card" data-dimension="'+d.key+'">'+(groups.length?groups.map(g=>{const a=amountParts(g.rows);return '<button type="button" class="v22group" data-dim-key="'+d.key+'" data-dim-value="'+encodeURIComponent(g.name)+'"><span><b>'+(g.missing?'🔴 ':'')+E(g.name)+'</b><small>'+g.rows.length+'笔</small></span><span class="v22amounts"><b>日常支出 '+money(a.expense)+'</b><small>储蓄 '+money(a.savings)+' · 收入 '+money(a.income)+'</small></span><span>查看 ›</span></button>';}).join(''):'<p class="muted">暂无账单</p>')+'</div>';
   }).join('');
   host.querySelectorAll('[data-dim-key]').forEach(btn=>btn.addEventListener('click',()=>{
    const d=dimensionConfig().find(x=>x.key===btn.dataset.dimKey),v=decodeURIComponent(btn.dataset.dimValue);
