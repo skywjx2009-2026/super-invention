@@ -2001,7 +2001,7 @@ body[data-theme="dark"] [id$="Modal"]>section:first-child>div:first-child{backgr
  const $=id=>document.getElementById(id);
  const css=document.createElement('style');
  css.textContent=[
- '#manualPurposeMulti{grid-column:1/-1!important;width:100%;min-width:0;}',
+ '#manualPurposeMulti{width:100%;min-width:0;}','label:has(>#manualPurposeMulti){grid-column:1/-1!important;width:100%;min-width:0;}',
  '#manualPurposeMulti .v22purpose-checks>div{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;}',
  '#manualPurposeMulti .v22purpose-checks label{min-height:42px;padding:8px 10px;box-sizing:border-box;min-width:0;}',
  '#manualPurposeMulti .v22purpose-checks label span{line-height:1.35;overflow-wrap:anywhere;}',
