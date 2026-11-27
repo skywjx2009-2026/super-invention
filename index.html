@@ -354,6 +354,7 @@ function confirmImport(){
   const category=val(r,'category'),remark=val(r,'remark'),account=val(r,'account'),sourceDetail=val(r,'sourceDetail'),tag=val(r,'tag');
   const payment=val(r,'payment'),status=val(r,'status'),tradeNo=val(r,'tradeNo'),merchantNo=val(r,'merchantNo');
   const bill={id:'',time,type:type||(p.sourceType==='微信账单'?'微信支付账单':'支付宝账单'),counterparty,product:product||remark,direction,amount,payment,status,tradeNo,merchantNo,remark,category:category||'未分类',account,sourceDetail,tag,source:p.fileName,importPlatform:p.sourceType};
+  if(typeof applyETCTollCategory==='function')applyETCTollCategory(bill);
   const signature=fullSignature(bill),duplicated=(tradeNo&&tradeNos.has(tradeNo))||(merchantNo&&merchantNos.has(merchantNo))||fullSignatures.has(signature);
   if(duplicated){duplicateCount++;return;}
   bill.id=tradeNo||merchantNo||('import_'+signature);
@@ -2783,4 +2784,35 @@ body[data-theme="dark"] [id$="Modal"]>section:first-child>div:first-child{backgr
 })();
 </script>
 
+
+<script>
+/* MICROLEDGER_ETC_TOLL_CATEGORY_V1
+   ETC通行费统一归入交通出行 / 高速通行；新导入即时应用，已有账单执行一次迁移。 */
+function applyETCTollCategory(bill){
+  if(!bill||bill.direction!=='支出')return false;
+  var text=[bill.product,bill.remark,bill.counterparty].map(function(v){return String(v||'').replace(/\\s+/g,'').toUpperCase();}).join(' ');
+  if(!text.includes('ETC通行费'))return false;
+  bill.category='交通出行';
+  bill.subcategory='高速通行';
+  return true;
+}
+(function migrateExistingETCTolls(){
+  var key='microledger_etc_toll_category_migration_v1';
+  try{
+    if(localStorage.getItem(key)==='done')return;
+    if(typeof getSavedBills!=='function'||typeof WECHAT_STORE_KEY==='undefined')return;
+    var bills=getSavedBills(),changed=0;
+    bills.forEach(function(bill){if(applyETCTollCategory(bill))changed++;});
+    if(changed){
+      localStorage.setItem(WECHAT_STORE_KEY,JSON.stringify(bills));
+      if(typeof savedBillsCacheRaw!=='undefined')savedBillsCacheRaw=null;
+      if(typeof rememberCategoryUsage==='function')rememberCategoryUsage(bills);
+      if(typeof renderCategorySummary==='function')renderCategorySummary();
+      if(typeof renderHome==='function')renderHome();
+      if(typeof renderBills==='function')renderBills();
+    }
+    localStorage.setItem(key,'done');
+  }catch(e){console.warn('ETC通行费分类迁移未完成',e);}
+})();
+</script>
 </body></html>
