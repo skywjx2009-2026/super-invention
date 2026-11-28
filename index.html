@@ -925,7 +925,8 @@ function readBackupFile(event){
    if(!p||p.appId!==APP_BACKUP_ID||p.schemaVersion!==1||!p.data||typeof p.data!=='object'||Array.isArray(p.data))throw new Error('文件格式不正确，或不是本应用生成的备份文件。');
    const billsRaw=p.data[WECHAT_STORE_KEY],backupBills=billsRaw?JSON.parse(billsRaw):[];
    if(!Array.isArray(backupBills))throw new Error('备份中的账单数据格式异常。');
-   for(const k of Object.keys(p.data)){if(k.indexOf('expense_assistant_')!==0||typeof p.data[k]!=='string')throw new Error('备份包含不支持的数据项，已停止恢复。');JSON.parse(p.data[k]);}
+   for(const k of Object.keys(p.data)){if(k.indexOf('expense_assistant_')!==0||typeof p.data[k]!=='string')throw new Error('备份包含不支持的数据项，已停止恢复。');}
+   /* localStorage 中既有 JSON 字符串，也有 light/dark 等普通文本；不能对所有键一律 JSON.parse。仅对核心账单数组做 JSON 校验，其余值按原始字符串恢复。 */
    window.pendingRestoreBackup={payload:p,fileName:file.name};
    box.innerHTML='<div style="background:#f5f8ff;border-radius:11px;padding:12px"><b>备份文件校验通过</b><p class="muted" style="line-height:1.7;margin:7px 0 0">文件：'+escapeHtml(file.name)+'<br>备份时间：'+escapeHtml(p.createdAt||'未知')+'<br>备份账单：'+backupBills.length+' 笔<br>数据项：'+Object.keys(p.data).length+' 项</p></div><button type="button" onclick="restoreAppBackup(false)" style="width:100%;margin-top:10px;border:0;border-radius:10px;background:#d92d20;color:white;padding:12px">完整覆盖恢复（替换本机应用数据）</button><button type="button" onclick="restoreAppBackup(true)" style="width:100%;margin-top:9px;border:1px solid #3978f6;border-radius:10px;background:white;color:#245fc7;padding:12px">合并账单（只补入备份中不存在的交易）</button><small class="muted" style="display:block;line-height:1.6;margin-top:9px">合并模式保留本机已有账单；备份中的分类配置、规则等设置会恢复为备份版本，以保证备份账单所需配置可用。</small>';
   }catch(e){window.pendingRestoreBackup=null;box.innerHTML='<p style="color:#b42318">读取失败：'+escapeHtml(e.message)+'</p>';}
