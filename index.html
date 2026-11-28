@@ -1701,6 +1701,7 @@ function testRecognitionRules(){const text=String(document.getElementById('recog
    addStickyPanel(btn,d.title+' · '+v,rows.slice().sort((a,z)=>String(z.time||'').localeCompare(String(a.time||''))));
   }));
  }
+ window.renderBillDimensionSummaries=renderDimensions;
  const baseSummary=window.renderCategorySummary;
  window.renderCategorySummary=function(){if(baseSummary)baseSummary();renderDimensions();};
  window.showCategoryDetails=function(encoded,direction){
@@ -3150,5 +3151,36 @@ body[data-theme="dark"] .bi-filter-panel[open] summary{border-bottom-color:var(-
 body[data-theme="dark"] button:focus-visible,body[data-theme="dark"] input:focus-visible,
 body[data-theme="dark"] select:focus-visible,body[data-theme="dark"] textarea:focus-visible{outline-color:#7aa7ff99!important}
 </style>
+
+
+<script>
+/* MICROLEDGER_DIMENSION_FILTER_SYNC_FIX_V1
+   确保最终版本的账单分类汇总渲染完成后，同步刷新交易性质、消费归属、用途标签及支付方式维度。
+   维度数据直接读取当前年月/关键词筛选后的 billFilteredRows，不改变任何账单字段或统计口径。 */
+(function(){
+  if(window.__microledgerDimensionFilterSyncV1)return;
+  window.__microledgerDimensionFilterSyncV1=true;
+  var previous=window.renderCategorySummary;
+  window.renderCategorySummary=function(){
+    if(typeof previous==='function')previous.apply(this,arguments);
+    if(typeof window.renderBillDimensionSummaries==='function')window.renderBillDimensionSummaries();
+  };
+  var previousBills=window.renderBills;
+  if(typeof previousBills==='function'){
+    window.renderBills=function(){
+      var result=previousBills.apply(this,arguments);
+      if(typeof window.renderBillDimensionSummaries==='function')window.renderBillDimensionSummaries();
+      return result;
+    };
+  }
+  if(document.readyState==='loading'){
+    document.addEventListener('DOMContentLoaded',function(){
+      if(typeof window.renderBillDimensionSummaries==='function')window.renderBillDimensionSummaries();
+    },{once:true});
+  }else if(typeof window.renderBillDimensionSummaries==='function'){
+    window.renderBillDimensionSummaries();
+  }
+})();
+</script>
 
 </body></html>
