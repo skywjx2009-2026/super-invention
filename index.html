@@ -3059,4 +3059,96 @@ return false;
 })();
 </script>
 
+
+<style id="microledger-ui-polish-v1">
+/* MICROLEDGER_UI_POLISH_V1：统一视觉层级与移动端触控体验；仅调整表现，不改变账务逻辑。 */
+:root{
+ --bg:#f4f6fa;--card:#fff;--text:#172235;--muted:#788599;
+ --blue:#3978f6;--green:#159968;--red:#e35d5b;--line:#e8edf4;
+}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+body{background:var(--bg);color:var(--text);line-height:1.5}
+.app{max-width:600px;padding-left:16px;padding-right:16px;padding-bottom:calc(94px + env(safe-area-inset-bottom))}
+.top{position:relative;padding:17px 2px 15px;min-height:62px}
+.top h1{font-size:22px;letter-spacing:.2px;font-weight:800}
+.appearance-switch{padding:3px;background:#e9eef7;flex-shrink:0}
+.appearance-switch button{min-height:34px;padding:7px 10px;font-size:11px;color:#64748b}
+.appearance-switch button.active{background:#fff;color:#245fc7;box-shadow:0 1px 4px #17223518}
+.page{padding-bottom:8px}
+.page .section{margin:23px 2px 11px;min-height:23px}
+.page .section h2{font-size:16px;font-weight:750;letter-spacing:.1px}
+.page .section span{font-size:11px;line-height:1.4;text-align:right}
+.card,.stat{border:1px solid #edf0f5;box-shadow:0 4px 16px #1b2b4a08}
+.card{border-radius:17px;padding:15px}
+.stat{border-radius:14px;padding:13px 12px;min-width:0}
+.stat small{font-size:11px;line-height:1.45}
+.stat b{font-size:16px;line-height:1.3;overflow-wrap:anywhere}
+.stats{gap:9px;margin:13px 0}
+.hero{border-radius:20px;padding:20px 18px;box-shadow:0 9px 24px #3978f622}
+.hero>.amount{font-size:29px;letter-spacing:.2px;font-variant-numeric:tabular-nums}
+.hero .totals{gap:12px}
+.hero .totals .amount{font-size:20px!important;font-variant-numeric:tabular-nums}
+.month{gap:9px}
+.month button{min-width:38px;min-height:36px}
+#home>button:first-child{min-height:48px;border-radius:14px!important;letter-spacing:.2px}
+#homeYearTags button,#billYearTags button,#homeMonthTags button,#billMonthTags button{
+ min-height:34px;touch-action:manipulation;transition:background .15s ease,border-color .15s ease;
+}
+#homeMonthTags button,#billMonthTags button{border-radius:10px!important;font-weight:600}
+#billSearch{min-height:44px;border-radius:12px!important;background:var(--card)!important;color:var(--text)!important}
+#billSearch::placeholder{color:#9aa5b5}
+#mine>.card{padding:8px 14px}
+#mine .tx{min-height:62px;gap:10px}
+#mine .tx .icon{flex:0 0 40px;width:40px;height:40px;border-radius:13px}
+#mine .txmain{min-width:0}
+#mine .txmain b{font-size:14px!important}
+#mine .txmain small{line-height:1.45}
+#mine .tx>span:last-child{flex:0 0 auto;font-size:21px;color:#8b97a8}
+.tabs{width:min(600px,100%);padding:8px 8px calc(8px + env(safe-area-inset-bottom));border-top:1px solid #e8edf4;box-shadow:0 -5px 20px #1b2b4a08}
+.tabs button{position:relative;flex:1;min-height:48px;gap:3px;border-radius:12px;padding:4px 2px;color:#8490a2;font-weight:600;touch-action:manipulation}
+.tabs button strong{font-size:20px;line-height:1.2}
+.tabs button.active{color:var(--blue);background:#eef4ff}
+.tabs button:active{transform:scale(.97)}
+button,input,select,textarea{touch-action:manipulation}
+button{ -webkit-tap-highlight-color:transparent }
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{
+ outline:3px solid #3978f655!important;outline-offset:2px
+}
+input,select,textarea{border-color:var(--line)!important;border-radius:10px}
+.bi-filter-panel{border-radius:15px}
+.bi-filter-panel summary{min-height:28px}
+.bi-filter-panel[open] summary{padding-bottom:10px;border-bottom:1px solid var(--line)}
+.tx{transition:background .15s ease}
+.tx:active{background:#f5f8fd!important}
+.empty{padding:36px 18px}
+@media(max-width:380px){
+ .app{padding-left:12px;padding-right:12px}
+ .top h1{font-size:20px}
+ .appearance-switch button{padding:6px 8px}
+ .stat{padding:11px 9px}
+ .stat b{font-size:14px}
+ .page .section span{max-width:48%}
+}
+@media(prefers-reduced-motion:reduce){
+ html{scroll-behavior:auto}
+ *,*::before,*::after{transition-duration:.01ms!important;animation-duration:.01ms!important}
+}
+/* 深色主题：覆盖本轮新增的通用视觉样式，保留原有业务状态色。 */
+body[data-theme="dark"]{--bg:#111827;--card:#1e2938;--text:#e7edf5;--muted:#a7b3c4;--line:#39475a;background:var(--bg);color:var(--text)}
+body[data-theme="dark"] .card,body[data-theme="dark"] .stat{background:var(--card);border-color:#344256;box-shadow:0 4px 16px #0002}
+body[data-theme="dark"] .appearance-switch{background:#263449}
+body[data-theme="dark"] .appearance-switch button{color:#c3cede}
+body[data-theme="dark"] .appearance-switch button.active{background:#3b4b63;color:#fff;box-shadow:none}
+body[data-theme="dark"] .tabs{background:#182333ed;border-top-color:#344256;box-shadow:0 -5px 20px #0003}
+body[data-theme="dark"] .tabs button{color:#9aa9bc}
+body[data-theme="dark"] .tabs button.active{background:#263d60;color:#9fc0ff}
+body[data-theme="dark"] #billSearch{background:#1e2938!important;color:#e7edf5!important;border-color:#46566c!important}
+body[data-theme="dark"] #billSearch::placeholder{color:#9aa9bc}
+body[data-theme="dark"] #mine .tx{background:transparent!important;color:var(--text)}
+body[data-theme="dark"] #mine .tx:active{background:#263449!important}
+body[data-theme="dark"] .bi-filter-panel[open] summary{border-bottom-color:var(--line)}
+body[data-theme="dark"] button:focus-visible,body[data-theme="dark"] input:focus-visible,
+body[data-theme="dark"] select:focus-visible,body[data-theme="dark"] textarea:focus-visible{outline-color:#7aa7ff99!important}
+</style>
+
 </body></html>
